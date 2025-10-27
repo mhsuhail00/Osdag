@@ -19,22 +19,23 @@ from .utils.common.component import *
 # from design_type.connection.column_cover_plate import ColumnCoverPlate
 
 class OurLog(logging.Handler):
-
     def __init__(self, key):
         logging.Handler.__init__(self)
-
         self.key = key
-        # self.key.setText("<h1>Welcome to Osdag</h1>")
 
     def handle(self, record):
-        msg = self.format(record)
-        if record.levelname == 'WARNING':
-            msg = "<span style='color: blue;'>"+ msg +"</span>"
-        elif record.levelname == 'ERROR':
-            msg = "<span style='color: red;'>"+ msg +"</span>"
-        elif record.levelname == 'INFO':
-            msg = "<span style='color: green;'>" + msg + "</span>"
-        self.key.append(msg)
+        try:
+            msg = self.format(record)
+            # Check if the widget still exists before appending
+            if self.key is not None and hasattr(self.key, 'append'):
+                self.key.append(msg)
+        except RuntimeError:
+            # Widget has been deleted, ignore this log message
+            pass
+        except Exception as e:
+            # Log to console instead if GUI logging fails
+            print(f"Logging error: {e}")
+            print(f"Message: {self.format(record)}")
 
 
 def connectdb1():

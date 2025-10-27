@@ -634,7 +634,7 @@ class ColumnDesign(Member):
         self.end_2_y = design_dictionary[KEY_END2_Y]
 
         # factored loads
-        self.load = Load(axial_force=design_dictionary[KEY_AXIAL], shear_force="", moment="", moment_minor="", unit_kNm=True)
+        self.load = Load(axial_force=design_dictionary[KEY_AXIAL], shear_force=0, moment=0, moment_minor=0, unit_kNm=True)
 
         # design preferences
         self.allowable_utilization_ratio = float(design_dictionary[KEY_ALLOW_UR])

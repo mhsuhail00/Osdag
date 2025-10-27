@@ -1953,7 +1953,10 @@ class Window(QMainWindow):
             QMessageBox.about(QMessageBox(), "Information", self.load_input_error_message)
 
     def common_function_for_save_and_design(self, main, data, trigger_type):
-
+        #added import before the function call
+        import os
+        from pathlib import Path
+        import yaml
         # @author: Amir
         option_list = main.input_values(self)
         self.design_fn(option_list, data, main)
@@ -2061,10 +2064,17 @@ class Window(QMainWindow):
                 #         QTimer.singleShot(0, lambda:self.retakeScreenshot(fName))
 
             else:
+                os.makedirs("./ResourceFiles/images", exist_ok=True)
+                
                 for fName in ['3d.png', 'top.png',
                               'front.png', 'side.png']:
-                    with open("./ResourceFiles/images/"+fName, 'w'):
-                        pass
+                    
+                    
+
+             #  create file if actually needed
+                    file_path = os.path.join("./ResourceFiles/images", fName)
+                    Path(file_path).touch()  # Creates empty file safely
+                    
                 self.display.EraseAll()
                 for chkbox in main.get_3d_components(main):
                     self.frame.findChild(QtWidgets.QCheckBox, chkbox[0]).setEnabled(False)
