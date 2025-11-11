@@ -2,6 +2,8 @@
 Entry point for Osdag GUI application.
 Handles splash screen and main window launch.
 """
+import osdag_gui.resources.resources_rc
+
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtCore import QThread, Signal, QFile, QTextStream
 from PySide6.QtGui import QFontDatabase, QFont
@@ -144,7 +146,7 @@ def GUI():
     # }
     app = QApplication(sys.argv)
     fid = QFontDatabase.addApplicationFont(":/fonts/UbuntuSans-Regular.ttf")
-    # font = QFontDatabase.applicationFontFamilies(fid)[0]
+    #font = QFontDatabase.applicationFontFamilies(fid)[0]
     # app.setFont(QFont(font))
 
     app.theme_manager = ThemeManager(app)

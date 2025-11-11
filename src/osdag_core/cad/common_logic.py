@@ -1762,7 +1762,7 @@ class CommonDesignLogic(object):
             :return: The calculated values/parameters to create 3D CAD model of individual components.
         """
 
-        Col = self.module_class
+        Col = self.module_object
         print("COL_DESIGINATION :",Col.result_designation)
 
         if 'RHS' in Col.result_designation or 'SHS' in Col.result_designation:  # hollow sections 'RHS and SHS'
@@ -1830,7 +1830,7 @@ class CommonDesignLogic(object):
 
     def createBoltedLapJoint(self):
 
-        Conn = self.module_class
+        Conn = self.module_object
         print("THIS IS CONN")
         print(Conn)
         for attr in dir(Conn):
@@ -1859,7 +1859,7 @@ class CommonDesignLogic(object):
     def createButtJointBoltedCAD(self):
           
             # Get input values from the design object (i.e., instance of ButtJointBolted)
-            Col = self.module_class
+            Col = self.module_object
 
             # Extract parameters from the ButtJointBolted object
             self.plate1_thickness = float(Col.plate1.thickness[0])
@@ -1881,7 +1881,7 @@ class CommonDesignLogic(object):
 
     def createSimplySupportedBeam(self):
 
-        Flex = self.module_class
+        Flex = self.module_object
 
         print(f"Flex.support {Flex.support}")
 
@@ -1913,7 +1913,7 @@ class CommonDesignLogic(object):
 
     def createCantileverBeam(self):
 
-        Flex = self.module_class
+        Flex = self.module_object
 
         print(f"Flex.support {Flex.support}")
 
@@ -1945,7 +1945,7 @@ class CommonDesignLogic(object):
 
     def createPurlin(self):
 
-        Flex = self.module_class
+        Flex = self.module_object
         print(f"This is the module name {Flex}")
 
         Flex.section_property = Flex.section_connect_database(Flex, Flex.result_designation)
@@ -1966,7 +1966,7 @@ class CommonDesignLogic(object):
         return purlin
 
     def createStrutsInTrusses(self):
-        Col = self.module_class
+        Col = self.module_object
         Col.section_property = AngleComponent(designation = Col.result_designation, material_grade = Col.material)
         if Col.sec_profile=="Angles":
 
@@ -2409,7 +2409,9 @@ class CommonDesignLogic(object):
             self.ColObj = self.createColumnInFrameCAD()
 
             if self.component == "Model":
-                osdag_display_shape(self.display, self.ColObj, update=True)
+                label = ["Column", "Main Column Model"]
+                osdag_display_shape(self.display, self.ColObj, update=True, label=label, canvas=self.cad_widget)
+
 
         elif self.mainmodule == 'Lap Joint Bolted Connection':
             self.col = self.module_object  
@@ -2456,7 +2458,7 @@ class CommonDesignLogic(object):
 
         elif self.mainmodule == 'Flexural Members - Purlins':
             self.flex = self.module_object  
-            print(f"THIS IS SELF.MODULE_CLASS {self.flex}")
+            print(f"THIS IS SELF.MODULE_OBJECT {self.flex}")
             self.FObj = self.createPurlin()
 
             if self.component == "Model":

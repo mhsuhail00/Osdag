@@ -649,23 +649,32 @@ class MainWindow(QMainWindow):
         self.clear_layout(self.main_widget_layout)
         column_design = CustomWindow(title, ColumnDesign, parent=self)
 
-        # Load the last Design Inputs-start------------------------------------
+    # Load the last Design Inputs-start------------------------------------
         last_design_folder = os.path.join('ResourceFiles', 'last_designs')
         last_design_file = str(column_design.backend.module_name()).replace(' ', '') + ".osi"
         last_design_file = os.path.join(last_design_folder, last_design_file)
         last_design_dictionary = {}
 
-    # Create folder if it doesn't exist
-    if not os.path.isdir(last_design_folder):
-        os.makedirs(last_design_folder)
+    #  Ensure folder and file exist safely
+        if not os.path.isdir(last_design_folder):
+            os.makedirs(last_design_folder, exist_ok=True)
 
-    # Load previous design if file exists
-    if os.path.isfile(last_design_file):
-        with open(str(last_design_file), 'r') as last_design:
-            last_design_dictionary = yaml.safe_load(last_design)
-            column_design.setDictToUserInputs(last_design_dictionary)
+        if os.path.isfile(last_design_file):
+           try:
+               with open(str(last_design_file), 'r') as last_design:
+                   last_design_dictionary = yaml.safe_load(last_design)
+                   column_design.setDictToUserInputs(last_design_dictionary)
+           except Exception as e:
+               print(f"Warning: Could not load previous design file: {e}")
+        else:
+        # If file doesn’t exist, create a default folder in home as fallback
+            fallback_folder = os.path.join(os.path.expanduser("~"), "OsdagDesigns")
+            os.makedirs(fallback_folder, exist_ok=True)
+            last_design_file = os.path.join(fallback_folder, "last_column_design.osi")
+
     # Load the last Design Inputs-end------------------------------------
 
+<<<<<<< HEAD
     self.main_widget_instance = column_design
     column_design.openNewTab.connect(self.handle_add_tab)
     column_design.downloadDatabase.connect(self.download_Database)
@@ -673,6 +682,14 @@ class MainWindow(QMainWindow):
     index = self.tab_bar.currentIndex()
     self.tab_bar.setTabText(index, title)
 >>>>>>> d8f17e03 (Fix: Mac environment setup, dependency updates, and refactoring of coloumn.py)
+=======
+        self.main_widget_instance = column_design
+        column_design.openNewTab.connect(self.handle_add_tab)
+        column_design.downloadDatabase.connect(self.download_Database)
+        self.main_widget_layout.addWidget(column_design)
+        index = self.tab_bar.currentIndex()
+        self.tab_bar.setTabText(index, title)
+>>>>>>> ec6aa33f (Fix: Column 3D model rendering and CAD integration improvements)
 
     def open_home_page(self, module):
         self.clear_layout(self.main_widget_layout)

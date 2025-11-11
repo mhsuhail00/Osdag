@@ -1,18 +1,17 @@
 import sys
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                             QHBoxLayout, QLabel, QGraphicsView,
-                             QGraphicsScene,QGraphicsRectItem, QFrame)
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt, QRectF
-from PyQt5.QtGui import QPainter, QPen, QFont, QColor
-from PyQt5.QtGui import QPolygonF, QBrush
-from PyQt5.QtCore import QPointF
+from PySide6.QtWidgets import (
+    QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy,
+    QGraphicsRectItem, QGraphicsPolygonItem
+)
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPen, QColor, QBrush, QPolygonF
+
 from osdag_core.Common import *
 
 try:
     pen_style_dash = Qt.PenStyle.DashLine
 except AttributeError:
-    raise RuntimeError("Your PyQt5 version does not support dashed lines via Qt.PenStyle.DashLine. Please update PyQt5.")
+    raise RuntimeError("Your Qt bindings (PySide6) version do not support dashed lines via Qt.PenStyle.DashLine. Please update PySide6.")
 
 class B2BCoverPlateCapacityDetails(QMainWindow):
     def __init__(self, connection_obj, rows=3, cols=2 , main = None):

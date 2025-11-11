@@ -27,6 +27,7 @@ from ..member import Member
 from ...Report_functions import *
 from ...design_report.reportGenerator_latex import CreateLatex
 from pylatex.utils import NoEscape
+from osdag_core.design_type.member import Member
 
 
 # ============================================================================
@@ -359,6 +360,9 @@ class ColumnDesign(Member):
         super(ColumnDesign, self).__init__()
         self._initialize_attributes()
         
+        #Ensure hover_dict exists (used by GUI for tooltip handling)
+        self.hover_dict = {}
+        
     def cleanup(self):
         """Clean up logger handlers when module is closed."""
         # Remove all handlers associated with this module
@@ -494,30 +498,31 @@ class ColumnDesign(Member):
             (KEY_AXIAL, KEY_DISP_AXIAL_STAR, TYPE_TEXTBOX, None, True, 'Int Validator'),
         ]
     
-    def fn_profile_section(self):
-        """Return section list based on profile."""
-        profile = self[0]
-        
+    def fn_profile_section(self, arg_list):
+        """Return section list based on selected profile using the database."""
+        # arg_list contains the selected value from the previous combo box
+        profile = arg_list[0] if arg_list else None
+
         if profile == 'Beams and Columns':
             res1 = connectdb("Beams", call_type="popup")
             res2 = connectdb("Columns", call_type="popup")
             return list(set(res1 + res2))
         elif profile == 'RHS and SHS':
-            res1 = connectdb("RHS", call_type="popup")
-            res2 = connectdb("SHS", call_type="popup")
-            return list(set(res1 + res2))
+              res1 = connectdb("RHS", call_type="popup")
+              res2 = connectdb("SHS", call_type="popup")
+              return list(set(res1 + res2))
         elif profile == 'CHS':
             return connectdb("CHS", call_type="popup")
         elif profile in ['Angles', 'Back to Back Angles', 'Star Angles']:
             return connectdb('Angles', call_type="popup")
         elif profile in ['Channels', 'Back to Back Channels']:
             return connectdb("Channels", call_type="popup")
-        
+
         return []
-    
-    def fn_end1_end2(self):
+
+    def fn_end1_end2(self, arg_list):
         """Return valid end2 options based on end1."""
-        end1 = self[0]
+        end1 = arg_list[0] if arg_list else None
         
         end_conditions = {
             'Fixed': VALUES_END2,
@@ -528,8 +533,10 @@ class ColumnDesign(Member):
         
         return end_conditions.get(end1, [])
     
-    def fn_end1_image(self):
+    def fn_end1_image(self, arg_list):
         """Return image path based on end1 condition."""
+        end1 = arg_list[0] if arg_list else None
+        
         image_map = {
             'Fixed': "6.RRRR.PNG",
             'Free': "1.RRFF.PNG",
@@ -540,9 +547,10 @@ class ColumnDesign(Member):
         image_file = image_map.get(self, "6.RRRR.PNG")
         return str(files("osdag_core.data.ResourceFiles.images").joinpath(image_file))
     
-    def fn_end2_image(self):
+    def fn_end2_image(self, arg_list):
         """Return image path based on end1 and end2 conditions."""
-        end1, end2 = self[0], self[1]
+        end1 = arg_list[0] if len(arg_list) > 0 else None
+        end2 = arg_list[1] if len(arg_list) > 1 else None
         
         image_map = {
             ('Fixed', 'Fixed'): "6.RRRR.PNG",
@@ -623,7 +631,7 @@ class ColumnDesign(Member):
             (KEY_DESIGN_STRENGTH_COMPRESSION, KEY_DISP_DESIGN_STRENGTH_COMPRESSION, TYPE_TEXTBOX,
              round(self.result_capacity * 1e-3, 2) if flag else '', True),
         ]
-    
+
     # ========================================================================
     # VALIDATION AND INPUT PROCESSING
     # ========================================================================
@@ -648,7 +656,7 @@ class ColumnDesign(Member):
             return all_errors
         
         # All fields present, proceed with design
-        self.set_input_values(self, design_dictionary)
+        self.set_input_values(design_dictionary)
         
         if not self.design_status and len(self.failed_design_dict) > 0:
             logger.error("Design Failed, Check Design Report")
@@ -662,7 +670,7 @@ class ColumnDesign(Member):
     def _check_missing_fields(self, design_dictionary: Dict) -> List[str]:
         """Check for missing or invalid input fields."""
         missing_fields = []
-        option_list = self.input_values(self)
+        option_list = self.input_values()
         
         for option in option_list:
             if option[2] == TYPE_TEXTBOX:
@@ -699,7 +707,7 @@ class ColumnDesign(Member):
     
     def set_input_values(self, design_dictionary: Dict):
         """Set input values from design dictionary and initiate design."""
-        super(ColumnDesign, self).set_input_values(self, design_dictionary)
+        super(ColumnDesign, self).set_input_values(design_dictionary)
         
         # Extract inputs
         self._extract_inputs(design_dictionary)
@@ -713,11 +721,11 @@ class ColumnDesign(Member):
         
         # Perform design
         self._initialize_attributes()
-        flag = self.section_classification(self)
+        self.flag = self.section_classification()
         
-        if flag:
-            self.design_column(self)
-            self.results(self)
+        if self.flag:
+            self.design_column()
+            self.results()
     
     def _extract_inputs(self, design_dictionary: Dict):
         """Extract all inputs from design dictionary."""
@@ -858,32 +866,55 @@ class ColumnDesign(Member):
         """Perform column design for all valid sections."""
         if not self.flag:
             return
-        
+
         for section in self.input_section_list:
-            # Get section properties
-            section_property = SectionProperties.get_section_property(
-                self.sec_profile, section, self.material
-            )
-            
-            # Update material property
-            self.material_property.connect_to_database_to_get_fy_fu(
-                self.material,
-                max(section_property.flange_thickness, section_property.web_thickness)
-            )
-            self.epsilon = math.sqrt(EPSILON_FACTOR / self.material_property.fy)
-            
-            # Calculate design parameters
-            result_dict = self._calculate_section_design(section, section_property)
-            
-            # Store results
-            ur = result_dict['ur']
-            cost = result_dict['cost']
-            
-            self.optimum_section_ur_results[ur] = result_dict
-            self.optimum_section_ur.append(ur)
-            
-            self.optimum_section_cost_results[cost] = result_dict
-            self.optimum_section_cost.append(cost)
+            try:
+                # Get section properties
+                section_property = SectionProperties.get_section_property(
+                    self.sec_profile, section, self.material
+                )
+
+                # Update material property
+                self.material_property.connect_to_database_to_get_fy_fu(
+                    self.material,
+                    max(section_property.flange_thickness, section_property.web_thickness)
+                )
+                self.epsilon = math.sqrt(EPSILON_FACTOR / self.material_property.fy)
+
+                # Calculate design parameters
+                result_dict = self._calculate_section_design(section, section_property)
+
+                if not isinstance(result_dict, dict):
+                    print(f"[WARN] _calculate_section_design returned non-dict for section {section}: {result_dict}")
+                    continue
+
+                # Debug: show available keys
+                print(f"[DEBUG] result_dict keys for section {section}: {list(result_dict.keys())}")
+
+                # Safely fetch UR and Cost (case-insensitive)
+                ur = result_dict.get("UR") or result_dict.get("ur")
+                cost = result_dict.get("Cost") or result_dict.get("cost")
+
+                if ur is None:
+                    print(f"[WARN] Missing 'UR' in result_dict for section {section}. Setting UR=0.")
+                    ur = 0.0
+                    result_dict["UR"] = ur
+
+                if cost is None:
+                    print(f"[WARN] Missing 'Cost' in result_dict for section {section}. Setting Cost=999999.")
+                    cost = 999999
+                    result_dict["Cost"] = cost
+
+                # Store results
+                self.optimum_section_ur_results[ur] = result_dict
+                self.optimum_section_ur.append(ur)
+
+                self.optimum_section_cost_results[cost] = result_dict
+                self.optimum_section_cost.append(cost)
+
+            except Exception as e:
+                print(f"[ERROR] Exception during design for section {section}: {e}")
+                continue
     
     def _calculate_section_design(
         self,
@@ -1066,9 +1097,8 @@ class ColumnDesign(Member):
                 logger.info("The details for the best section provided is being shown")
                 self.result_UR = self.failed_design_dict['UR']
                 self.common_result(
-                    self,
-                    list_result=self.failed_design_dict,
-                    result_type=None
+                    self.failed_design_dict,
+                    None
                 )
                 logger.warning(
                     "Re-define the list of sections or check the Design Preferences option and re-design."
@@ -1081,9 +1111,8 @@ class ColumnDesign(Member):
         self.result_UR = valid_sections[-1]
         self.design_status = True
         self.common_result(
-            self,
-            list_result=self.optimum_section_ur_results,
-            result_type=self.result_UR
+            self.optimum_section_ur_results,
+            self.result_UR
         )
     
     def _process_cost_results(self):
@@ -1404,7 +1433,7 @@ class ColumnDesign(Member):
         ))
         
         self.report_check.append((
-            r'$\phi_{yy}, ' ',
+            r'$\phi_{yy}$', '',
             cl_8_7_1_5_phi(
                 self.result_IF_yy, round(self.result_nd_esr_yy, 2),
                 round(self.result_phi_yy, 2)
@@ -1413,7 +1442,7 @@ class ColumnDesign(Member):
         ))
         
         self.report_check.append((
-            r'$\phi_{zz}, ' ',
+            r'$\phi_{zz}$', '',
             cl_8_7_1_5_phi(
                 self.result_IF_zz, round(self.result_nd_esr_zz, 2),
                 round(self.result_phi_zz, 2)
@@ -1422,7 +1451,7 @@ class ColumnDesign(Member):
         ))
         
         self.report_check.append((
-            r'$F_{cd,yy} \, \left( \frac{N}{\text{mm}^2} \right), ' ',
+            r'$F_{cd,yy} \, \left( \frac{N}{\text{mm}^2} \right)$',
             cl_8_7_1_5_Buckling(
                 self.material_property.fy, self.gamma_m0,
                 round(self.result_nd_esr_yy, 2), round(self.result_phi_yy, 2),
@@ -1432,7 +1461,7 @@ class ColumnDesign(Member):
         ))
         
         self.report_check.append((
-            r'$F_{cd,zz} \, \left( \frac{N}{\text{mm}^2} \right), ' ',
+            r'$F_{cd,zz} \, \left( \frac{N}{\text{mm}^2} \right)$',
             cl_8_7_1_5_Buckling(
                 self.material_property.fy, self.gamma_m0,
                 round(self.result_nd_esr_zz, 2), round(self.result_phi_zz, 2),

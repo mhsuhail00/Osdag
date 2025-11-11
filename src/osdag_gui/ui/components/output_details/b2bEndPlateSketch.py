@@ -1,12 +1,10 @@
 import sys
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                             QHBoxLayout, QLabel, QGraphicsView,
-                             QGraphicsScene)
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt, QRectF
-from PyQt5.QtGui import QPainter, QPen, QFont
-from PyQt5.QtGui import QPolygonF, QBrush
-from PyQt5.QtCore import QPointF
+from PySide6.QtWidgets import (
+    QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy,
+    QGraphicsRectItem, QGraphicsPolygonItem
+)
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPen, QColor, QBrush, QPolygonF
 from osdag_core.Common import *
 
 class B2BEndPlateSketch(QMainWindow):
@@ -103,9 +101,9 @@ class B2BEndPlateSketch(QMainWindow):
         else:
             self.createDrawingExtendedTwoWay()
     def createDrawingFlushedReversible(self):
-        from PyQt5.QtCore import Qt
-        from PyQt5.QtGui import QPen, QColor, QBrush,QPolygonF
-        from PyQt5.QtWidgets import QGraphicsRectItem,QGraphicsPolygonItem
+        from PySide6.QtCore import Qt
+        from PySide6.QtGui import QPen, QColor, QBrush,QPolygonF
+        from PySide6.QtWidgets import QGraphicsRectItem,QGraphicsPolygonItem
         # === Input Parameters ===
         plate_height = self.height
         stiffener_height = self.stiffener_length
@@ -217,9 +215,9 @@ class B2BEndPlateSketch(QMainWindow):
         )
     
     def createDrawingExtendedOneWay(self):
-        from PyQt5.QtCore import Qt
-        from PyQt5.QtGui import QPen, QColor, QBrush,QPolygonF
-        from PyQt5.QtWidgets import QGraphicsRectItem,QGraphicsPolygonItem
+        from PySide6.QtCore import Qt
+        from PySide6.QtGui import QPen, QColor, QBrush,QPolygonF
+        from PySide6.QtWidgets import QGraphicsRectItem,QGraphicsPolygonItem
         # === Input Parameters ===
         plate_height = self.height
         stiffener_height = self.stiffener_length
@@ -395,9 +393,9 @@ class B2BEndPlateSketch(QMainWindow):
         # self.addDimensionsExtendedOneWay(edge,self.Gauge,self.CrossGauge,self.cols)
     
     def createDrawingExtendedTwoWay(self):
-        from PyQt5.QtCore import Qt
-        from PyQt5.QtGui import QPen, QColor, QBrush,QPolygonF
-        from PyQt5.QtWidgets import QGraphicsRectItem,QGraphicsPolygonItem
+        from PySide6.QtCore import Qt
+        from PySide6.QtGui import QPen, QColor, QBrush,QPolygonF
+        from PySide6.QtWidgets import QGraphicsRectItem,QGraphicsPolygonItem
         # === Input Parameters ===
         plate_height = self.height
         stiffener_height = self.stiffener_length

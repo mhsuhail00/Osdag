@@ -124,7 +124,7 @@ class VerticalMenuBar(QWidget):
             icon = icons.get(name)
             btn = CustomButton("  " + name, icon[0], icon[1], icon[2], group=self.button_group)
             btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding) # Make buttons expand vertically
-            btn.clicked.connect(lambda _,label=name, data=data.get(name): self._on_nav_button_clicked(data, label))
+            btn.clicked.connect(lambda *_, label=name, data=data.get(name): self._on_nav_button_clicked(data, label))
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setObjectName("navbar_button")
             self.button_group.append(btn)

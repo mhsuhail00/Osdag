@@ -3232,14 +3232,29 @@ class Member(Main):
         #     self.supporting_section = Beam(designation=design_dictionary[KEY_SUPTNGSEC], material_grade=design_dictionary[KEY_MATERIAL])
 
 
-    def new_material(self, input):
+    def new_material(self, arg_list=None):
+        """
+        Return True if the selected material requires the 'new material' popup.
+        The UI may call this function in two ways:
+         - new_material()  -> use self[0]
+         - new_material(arg_list) -> arg_list is a list of input values (UI passes this)
+         This function accepts both.
+        """
+        # Determine the selected material value location (prefer arg_list if provided)
+        try:
+            if arg_list and isinstance(arg_list, (list, tuple)) and len(arg_list) > 0:
+                selected_material = arg_list[0]
+            else:
+            # Fallback to self[0] (existing behaviour)
+                selected_material = self[0]
+        except Exception:
+            # Safe fallback: treat as not custom so popup won't show unexpectedly
+            selected_material = None
 
-        selected_material = input[0]
-        if selected_material in ["Custom","Custom Section"]:
+        if selected_material in ("Custom", "Custom Section"):
             return True
-        else:
-            return False
-
+        return False
+    
     ######################################
     # Function for individual component calls in 3D view
     ######################################

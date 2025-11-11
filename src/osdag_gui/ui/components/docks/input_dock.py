@@ -85,25 +85,32 @@ class InputDock(QWidget):
         toggle_layout.addStretch()
         self.main_layout.addWidget(self.toggle_strip)
     
-    # To equalize the size of label strings
-    def equalize_label_length(self, list):
-        # Calculate maximum size
+       # To equalize the size of label strings
+    def equalize_label_length(self, input_field_list):
+        """Ensure all labels have equal width by padding shorter ones safely."""
         max_len = 0
-        for t in list:
-            if t[2] not in [TYPE_TITLE, TYPE_IMAGE]:
-                if len(t[1]) > max_len:
-                    max_len = len(t[1])
-        
-        # Create a new list with equal string length
-        return_list = [] 
-        for t in list:
-            if t[2] not in [TYPE_TITLE, TYPE_IMAGE]:
-                new_tupple = (t[0], t[1].ljust(max_len)) + t[2:]
-            else:
-                new_tupple = t
-            return_list.append(new_tupple)
+        for t in input_field_list:
+            label = t[1] if len(t) > 1 else None
+            field_type = t[2] if len(t) > 2 else None
 
-        return return_list
+            # Only consider text labels for length
+            # Treat TYPE_IMAGE_COMPRESSION same as TYPE_IMAGE (do not include them)
+            if field_type not in [TYPE_TITLE, TYPE_IMAGE, getattr(globals(), 'TYPE_IMAGE_COMPRESSION', None)] and label and isinstance(label, str):
+                max_len = max(max_len, len(label))
+
+        # Create a new list with equalized label strings
+        normalized_list = []
+        for t in input_field_list:
+            label = t[1] if len(t) > 1 else None
+            field_type = t[2] if len(t) > 2 else None
+
+            if field_type not in [TYPE_TITLE, TYPE_IMAGE, getattr(globals(), 'TYPE_IMAGE_COMPRESSION', None)] and label and isinstance(label, str):
+                new_tuple = (t[0], label.ljust(max_len)) + t[2:]
+            else:
+                new_tuple = t
+            normalized_list.append(new_tuple)
+
+        return normalized_list
 
     def get_validator(self, validator):
         if validator == 'Int Validator':
@@ -199,15 +206,25 @@ class InputDock(QWidget):
 
                 cur_box_form.addRow(left, right_aligned_widget(right))
             
-            elif type == TYPE_IMAGE:
+            # Create image QLabel for both TYPE_IMAGE and TYPE_IMAGE_COMPRESSION
+            elif type in (TYPE_IMAGE, 'TYPE_IMAGE_COMPRESSION', "Image_compression"):
                 left = ""
                 right = QLabel()
                 right.setFixedWidth(90)
                 right.setFixedHeight(90)
                 right.setObjectName(field[0])
                 right.setScaledContents(True)
-                pixmap = QPixmap(field[3])
-                right.setPixmap(pixmap)
+                # Attempt to load default pixmap safely
+                default_pixmap_path = field[3] if len(field) > 3 else None
+                if default_pixmap_path:
+                    try:
+                        pixmap = QPixmap(str(default_pixmap_path))
+                        if pixmap.isNull():
+                            print(f"[WARN] Could not load pixmap (null) for path: {default_pixmap_path}")
+                        else:
+                            right.setPixmap(pixmap)
+                    except Exception as e:
+                        print(f"[WARN] Exception while loading pixmap for {default_pixmap_path}: {e}")
                 right.setAlignment(Qt.AlignmentFlag.AlignLeft)
                 cur_box_form.addRow(left, left_aligned_widget(right))
             
@@ -416,24 +433,37 @@ class InputDock(QWidget):
 
     def on_change_connect(self, key_changed, updated_list, data, backend):
         key_changed.currentIndexChanged.connect(lambda: self.change(key_changed, updated_list, self.data, backend))
-
-    # To update the label and combobox if Connectivity
+        #to update
     def change(self, k1, new, data, main):
+        """
+        Handles dynamic updates of dependent UI widgets when a controlling widget changes.
+        """
+        print(f"$${new}")
         for tup in new:
-            (object_name, k2_key, typ, f) = tup
+            try:
+                (object_name, k2_key, typ, f) = tup
+            except Exception as e:
+                print(f"[WARN] Malformed entry in updated_list: {tup} ({e})")
+                continue
+
             print(f"\n object_name:{object_name}")
             print(f"\n k1:{k1}")
             print(f"\n f: {f}")
             print(f"\n k1.objectName():{k1.objectName()}")
             print(f"\n k2_key:{k2_key}")
             print(f"\n typ:{typ}")
-            print(f"\n type:{typ}")
+
+            # skip if this trigger does not match
             if k1.objectName() not in object_name:
                 continue
+
+            # Adjust key for label or note
             if typ in [TYPE_LABEL, TYPE_OUT_LABEL]:
                 k2_key = k2_key + "_label"
-            if typ == TYPE_NOTE:
+            elif typ == TYPE_NOTE:
                 k2_key = k2_key + "_note"
+
+            # Find the target widget safely
             if typ in [TYPE_OUT_DOCK, TYPE_OUT_LABEL]:
                 k2 = self.input_widget.findChild(QWidget, k2_key)
             elif typ == TYPE_WARNING:
@@ -441,83 +471,137 @@ class InputDock(QWidget):
             else:
                 k2 = self.input_widget.findChild(QWidget, k2_key)
 
+            # --- build argument list ---
             arg_list = []
             for ob_name in object_name:
                 key = self.input_widget.findChild(QWidget, ob_name)
-                arg_list.append(key.currentText())
+                if key and hasattr(key, "currentText"):
+                    arg_list.append(key.currentText())
+                else:
+                    arg_list.append(None)
 
-            val = f(arg_list)
+            # --- safely call backend function ---
+            val = None
+            try:
+                # handle both signatures: f(arg_list) and f()
+                try:
+                    val = f(arg_list)
+                except TypeError:
+                    val = f()
+            except Exception as e:
+                print(f"[WARN] Backend function {f.__name__ if hasattr(f, '__name__') else f} raised: {e}")
+                val = None
+
             print(f"\n k2:{k2}")
             print(f"\n val:{val}")
+
+            # --- handle each widget type ---
             if typ == TYPE_COMBOBOX:
                 print("\n\nCombo")
-                k2.clear()
-                for values in val:
-                    k2.addItem(values)
-                    k2.setCurrentIndex(0)
-                if VALUES_WELD_TYPE[1] in val:
-                    k2.setCurrentText(VALUES_WELD_TYPE[1])
-                if k2_key in RED_LIST:
-                    red_list_set = set(red_list_function())
-                    current_list_set = set(val)
-                    current_red_list = list(current_list_set.intersection(red_list_set))
-                    for value in current_red_list:
-                        indx = val.index(str(value))
-                        k2.setItemData(indx, QBrush(QColor("red")), Qt.ForegroundRole)
+                if k2 is not None:
+                    k2.blockSignals(True)
+                    k2.clear()
+                    if val:
+                        for v in val:
+                            k2.addItem(v)
+                        k2.setCurrentIndex(0)
+                        if VALUES_WELD_TYPE[1] in val:
+                            k2.setCurrentText(VALUES_WELD_TYPE[1])
+                        if k2_key in RED_LIST:
+                            red_list_set = set(red_list_function())
+                            current_list_set = set(val)
+                            current_red_list = list(current_list_set.intersection(red_list_set))
+                            for value in current_red_list:
+                                idx = val.index(str(value))
+                                k2.setItemData(idx, QBrush(QColor("red")), Qt.ForegroundRole)
+                    k2.blockSignals(False)
+                else:
+                    print(f"[WARN] Combo widget not found for {k2_key}")
+
             elif typ == TYPE_COMBOBOX_CUSTOMIZED:
                 print("\n\nCust_Combo")
-                k2.setCurrentIndex(0)
-                self.data[k2_key + "_customized"] = val
+                if k2 is not None:
+                    k2.setCurrentIndex(0)
+                self.data[k2_key + "_customized"] = val if val else []
+
             elif typ == TYPE_CUSTOM_MATERIAL:
                 print("\n\nCust_Combo_material")
                 if val:
-                    self.new_material_dialog()
+                    try:
+                        self.new_material_dialog()
+                    except Exception as e:
+                        print(f"[WARN] Failed to open new_material_dialog: {e}")
+
             elif typ == TYPE_CUSTOM_SECTION:
+                print("\n\nCust_Combo_section")
                 if val:
-                    self.import_custom_section()
+                    try:
+                        self.import_custom_section()
+                    except Exception as e:
+                        print(f"[WARN] Failed to import custom section: {e}")
 
             elif typ == TYPE_LABEL:
                 print("\n\nLabel")
-                k2.setText(val)
+                if k2 is not None:
+                    k2.setText(str(val) if val is not None else "")
+                else:
+                    print(f"[WARN] Label widget not found for {k2_key}")
+
             elif typ == TYPE_NOTE:
                 print("\n\nNote")
-                k2.setText(val)
+                if k2 is not None:
+                    k2.setText(str(val) if val is not None else "")
+                else:
+                    print(f"[WARN] Note widget not found for {k2_key}")
+
             elif typ == TYPE_IMAGE:
                 print("\n\nImg")
-                pixmap1 = QPixmap(val)
-                k2.setPixmap(pixmap1)
+                if val:
+                    try:
+                        pixmap1 = QPixmap(val)
+                        if pixmap1.isNull():
+                            print(f"[WARN] Null pixmap for {val}")
+                        elif k2 is not None:
+                            k2.setPixmap(pixmap1)
+                        else:
+                            print(f"[WARN] Image widget not found for {k2_key}")
+                    except Exception as e:
+                        print(f"[WARN] Failed to set pixmap: {e}")
+                else:
+                    if k2 is not None:
+                        k2.clear()
+                    else:
+                        print(f"[WARN] Image widget not found for {k2_key}, skipping pixmap update.")
 
             elif typ == TYPE_TEXTBOX:
                 print("\n\ntext")
-                if main.module_name() == KEY_PLATE_GIRDER_MAIN_MODULE:
-                    w = self.get_current_widget_in_layout(k2_key)
-                    if not val and isinstance(w, QLineEdit):  # Show optimization button
-                        self.change_text_to_bound_btn(w, tup)
-                    elif val and isinstance(w, QPushButton):  # Show textbox for customized input
-                        self.change_bound_btn_to_text(w, tup)
-                else:
+                if k2 is not None:
                     if val:
                         k2.setEnabled(True)
-                    else: 
-                        k2.setText("")
+                    else:
                         k2.setDisabled(True)
+                        k2.setText("")
+                else:
+                    print(f"[WARN] Textbox not found for {k2_key}")
 
             elif typ == TYPE_COMBOBOX_FREEZE:
                 print("\n\nfreeze_Combo")
-                if val:
-                    k2.setEnabled(False)
+                if k2 is not None:
+                    k2.setEnabled(not bool(val))
                 else:
-                    k2.setEnabled(True)
+                    print(f"[WARN] Freeze combobox not found for {k2_key}")
+
             elif typ == TYPE_WARNING:
                 print("\n\nwarning")
                 if val:
                     QMessageBox.warning(self, "Application", k2)
+
             elif typ in [TYPE_OUT_DOCK, TYPE_OUT_LABEL]:
                 print("\n\nlast")
-                if val:
-                    k2.setVisible(False)
+                if k2 is not None:
+                    k2.setVisible(not bool(val))
                 else:
-                    k2.setVisible(True)
+                    print(f"[WARN] Output widget not found for {k2_key}")
 
     # For Plate-Girder Module-starts----------------------------------------------------
     def change_text_to_bound_btn(self, old_widget, tupple):
