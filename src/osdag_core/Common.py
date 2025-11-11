@@ -23,19 +23,34 @@ class OurLog(logging.Handler):
 
     def __init__(self, key):
         logging.Handler.__init__(self)
-
+        super().__init__()
         self.key = key
         # self.key.setText("<h1>Welcome to Osdag</h1>")
 
     def handle(self, record):
-        msg = self.format(record)
-        if record.levelname == 'WARNING':
-            msg = "<span style='color: blue;'>"+ msg +"</span>"
-        elif record.levelname == 'ERROR':
-            msg = "<span style='color: red;'>"+ msg +"</span>"
-        elif record.levelname == 'INFO':
-            msg = "<span style='color: green;'>" + msg + "</span>"
-        self.key.append(msg)
+        """safely append log messages to QTextEdit without crashing after widget deletion"""
+        try:
+            msg = self.format(record)
+            if record.levelname == 'WARNING':
+                msg = "<span style='color: blue;'>" + msg + "</span>"
+            elif record.levelname == 'ERROR':
+                msg = "<span style='color: red;'>" + msg + "</span>"
+            elif record.levelname == 'INFO':
+                msg = "<span style='color: green;'>" + msg + "</span>"
+
+            # Import sip for checking if QTextEdit still exists
+            import sip
+
+            #  Safety check: append only if the QTextEdit widget is still alive
+            if hasattr(self, "key") and self.key is not None and not sip.isdeleted(self.key):
+                self.key.append(msg)
+            else:
+                # Fallback: print to console if QTextEdit is deleted
+                print(f"[Osdag Logger] Skipped log (widget deleted): {msg}")
+
+        except Exception as e:
+            # Catch any unexpected errors in the logging handler
+            print(f"[Osdag Logger Error] {e}")
 
 
 def connectdb1():

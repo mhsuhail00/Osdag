@@ -414,18 +414,9 @@ class MainWindow(QMainWindow):
             self.open_header_plate_shear_connection()
         elif card_title == "Seated Angle":
             self.open_seated_angle_shear_connection()
-<<<<<<< HEAD
-        elif card_title == "End Plate":
-            self.open_end_plate_btc_page() 
-        elif card_title == "Plate Girder":
-            self.open_plate_girder()
-        elif card_title == "Bolted to End Gusset":
-            self.open_bolted_end_tension()
-=======
         elif card_title == "Column":  
-            self.open_column_design() 
->>>>>>> d8f17e03 (Fix: Mac environment setup, dependency updates, and refactoring of coloumn.py)
-
+            self.open_column_design()
+            
     #-------------Functions-to-load-modules-in-Tabwidget-START---------------------------
 
     def open_fin_plate_shear_connection(self):
@@ -543,153 +534,46 @@ class MainWindow(QMainWindow):
         self.main_widget_layout.addWidget(fin_plate)
         index = self.tab_bar.currentIndex()
         self.tab_bar.setTabText(index, title)
-<<<<<<< HEAD
-    
-    def open_plate_girder(self):
-        title = "Plate Girder"
-        self.clear_layout(self.main_widget_layout)
-        fin_plate = CustomWindow(title, PlateGirderWelded, parent=self)
-
-        # Load the last Design Inputs-start------------------------------------
-        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-        last_design_file = str(fin_plate.backend.module_name()).replace(' ', '') + ".osi"
-        last_design_file = os.path.join(last_design_folder, last_design_file)
-        last_design_dictionary = {}
-
-        # Create folder if it doesn't exist
-        if not os.path.isdir(last_design_folder):
-            os.makedirs(last_design_folder)
-
-        # Load previous design if file exists
-        if os.path.isfile(last_design_file):
-            with open(str(last_design_file), 'r') as last_design:
-                last_design_dictionary = yaml.safe_load(last_design)
-                fin_plate.setDictToUserInputs(last_design_dictionary)
-        # Load the last Design Inputs-end------------------------------------
-
-        self.main_widget_instance = fin_plate
-        fin_plate.openNewTab.connect(self.handle_add_tab)
-        fin_plate.downloadDatabase.connect(self.download_Database)
-        self.main_widget_layout.addWidget(fin_plate)
-        index = self.tab_bar.currentIndex()
-        self.tab_bar.setTabText(index, title)
-
-    def open_end_plate_btc_page(self):
-        title = "Beam-to-Column End Plate Connection"
-        self.clear_layout(self.main_widget_layout)
         
-        end_plate_btc = CustomWindow(title, BeamColumnEndPlate, parent=self)
-
-        # Load the last Design Inputs-start------------------------------------
-        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-        last_design_file = str(end_plate_btc.backend.module_name()).replace(' ', '') + ".osi"
-        last_design_file = os.path.join(last_design_folder, last_design_file)
-        last_design_dictionary = {}
-
-        # Create folder if it doesn't exist
-        if not os.path.isdir(last_design_folder):
-            os.makedirs(last_design_folder)
-
-        # Load previous design if file exists
-        if os.path.isfile(last_design_file):
-            with open(str(last_design_file), 'r') as last_design:
-                last_design_dictionary = yaml.safe_load(last_design)
-                end_plate_btc.setDictToUserInputs(last_design_dictionary)
-        # Load the last Design Inputs-end------------------------------------
-
-        self.main_widget_instance = end_plate_btc
-        end_plate_btc.openNewTab.connect(self.handle_add_tab)
-        end_plate_btc.downloadDatabase.connect(self.download_Database)
-        self.main_widget_layout.addWidget(end_plate_btc)
-
-        # Update tab title and docking icons
-        index = self.tab_bar.currentIndex()
-        self.tab_bar.setTabText(index, title)
-
-    def open_bolted_end_tension(self):
-        title = "Bolted to End Gusset"
-        self.clear_layout(self.main_widget_layout)
-        tension_bolted = CustomWindow(title, Tension_bolted, parent=self)
-
-        # Load the last Design Inputs-start------------------------------------
-        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-        last_design_file = str(tension_bolted.backend.module_name()).replace(' ', '') + ".osi"
-        last_design_file = os.path.join(last_design_folder, last_design_file)
-        last_design_dictionary = {}
-
-        # Create folder if it doesn't exist
-        if not os.path.isdir(last_design_folder):
-            os.makedirs(last_design_folder)
-
-        # Load previous design if file exists
-        if os.path.isfile(last_design_file):
-            with open(str(last_design_file), 'r') as last_design:
-                last_design_dictionary = yaml.safe_load(last_design)
-                tension_bolted.setDictToUserInputs(last_design_dictionary)
-        # Load the last Design Inputs-end------------------------------------
-
-        self.main_widget_instance = tension_bolted
-        tension_bolted.openNewTab.connect(self.handle_add_tab)
-        tension_bolted.downloadDatabase.connect(self.download_Database)
-        self.main_widget_layout.addWidget(tension_bolted)
-        index = self.tab_bar.currentIndex()
-        self.tab_bar.setTabText(index, title)
-        # Show docking Icons
-        self.tab_widget_content[index][1] = True
-        current_tab_data = self.tab_widget_content[index]
-        self.update_docking_icons(current_tab_data[1], current_tab_data[2], current_tab_data[3], current_tab_data[4])
-
-=======
-        
-    #column design opening function 
-        
+    # column design opening function
     def open_column_design(self):
         """Opens the Column Design module."""
         title = "Column Design"
         self.clear_layout(self.main_widget_layout)
         column_design = CustomWindow(title, ColumnDesign, parent=self)
 
-    # Load the last Design Inputs-start------------------------------------
+        # Load the last Design Inputs-start------------------------------------
         last_design_folder = os.path.join('ResourceFiles', 'last_designs')
         last_design_file = str(column_design.backend.module_name()).replace(' ', '') + ".osi"
         last_design_file = os.path.join(last_design_folder, last_design_file)
         last_design_dictionary = {}
 
-    #  Ensure folder and file exist safely
+        # Ensure folder and file exist safely
         if not os.path.isdir(last_design_folder):
             os.makedirs(last_design_folder, exist_ok=True)
 
         if os.path.isfile(last_design_file):
-           try:
-               with open(str(last_design_file), 'r') as last_design:
-                   last_design_dictionary = yaml.safe_load(last_design)
-                   column_design.setDictToUserInputs(last_design_dictionary)
-           except Exception as e:
-               print(f"Warning: Could not load previous design file: {e}")
+            try:
+                with open(str(last_design_file), 'r') as last_design:
+                    last_design_dictionary = yaml.safe_load(last_design)
+                    column_design.setDictToUserInputs(last_design_dictionary)
+            except Exception as e:
+                print(f"Warning: Could not load previous design file: {e}")
         else:
-        # If file doesn’t exist, create a default folder in home as fallback
+            # If file doesn't exist, create a default folder in home as fallback
             fallback_folder = os.path.join(os.path.expanduser("~"), "OsdagDesigns")
             os.makedirs(fallback_folder, exist_ok=True)
             last_design_file = os.path.join(fallback_folder, "last_column_design.osi")
 
-    # Load the last Design Inputs-end------------------------------------
+        # Load the last Design Inputs-end------------------------------------
 
-<<<<<<< HEAD
-    self.main_widget_instance = column_design
-    column_design.openNewTab.connect(self.handle_add_tab)
-    column_design.downloadDatabase.connect(self.download_Database)
-    self.main_widget_layout.addWidget(column_design)
-    index = self.tab_bar.currentIndex()
-    self.tab_bar.setTabText(index, title)
->>>>>>> d8f17e03 (Fix: Mac environment setup, dependency updates, and refactoring of coloumn.py)
-=======
         self.main_widget_instance = column_design
         column_design.openNewTab.connect(self.handle_add_tab)
         column_design.downloadDatabase.connect(self.download_Database)
         self.main_widget_layout.addWidget(column_design)
         index = self.tab_bar.currentIndex()
         self.tab_bar.setTabText(index, title)
->>>>>>> ec6aa33f (Fix: Column 3D model rendering and CAD integration improvements)
+
 
     def open_home_page(self, module):
         self.clear_layout(self.main_widget_layout)
@@ -884,5 +768,3 @@ if __name__ == "__main__":
     main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec())
-
-
