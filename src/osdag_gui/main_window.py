@@ -33,9 +33,30 @@ from osdag_core.design_type.connection.seated_angle_connection import SeatedAngl
 from osdag_core.design_type.connection.end_plate_connection import EndPlateConnection
 from osdag_core.design_type.connection.beam_column_end_plate import BeamColumnEndPlate
 from osdag_core.design_type.tension_member.tension_bolted import Tension_bolted
+from osdag_core.design_type.tension_member.tension_welded import Tension_welded
+
+
 
 from osdag_core.design_type.plate_girder.weldedPlateGirder import PlateGirderWelded
 import openpyxl
+
+import logging
+_orig_handler_handle = logging.Handler.handle
+
+def _safe_handler_handle(self, record):
+    try:
+        return _orig_handler_handle(self, record)
+    except RuntimeError as e:
+        msg = str(e)
+        if "already deleted" in msg:
+            try:
+                logging.getLogger().removeHandler(self)
+            except Exception:
+                pass
+            return None
+        raise
+
+logging.Handler.handle = _safe_handler_handle
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -331,9 +352,54 @@ class MainWindow(QMainWindow):
             return module.backend.design_status
         else:
             return False
+        
     
-    def _get_template_instance(self, index) -> object:
-        return self.tab_widget_content[index].layout().itemAt(0).widget()
+
+
+    # temporary change 
+    
+    def _get_template_instance(self, index):
+        """
+        Return the actual template widget for a tab index.
+        Defensive: handles cases where tab_widget_content[index] is
+        a QWidget, a list/tuple containing the widget, or already the widget.
+        """
+        obj = self.tab_widget_content[index]
+
+        # Case A: already a QWidget-like object with layout() and widget() access
+        try:
+            if hasattr(obj, "layout"):
+                # common pattern: container widget whose layout.itemAt(0).widget() is the real template
+                lay = obj.layout()
+                if lay is not None and lay.count() > 0:
+                    item = lay.itemAt(0)
+                    if item is not None:
+                        w = item.widget()
+                        if w is not None:
+                            return w
+                # fallback: obj itself might be the template
+                return obj
+        except Exception:
+            pass
+
+        # Case B: obj is a plain list/tuple holding the widget as first element
+        if isinstance(obj, (list, tuple)) and len(obj) > 0:
+            first = obj[0]
+            # if first is a QWidget, return it; if it's a layout holder, try extracting widget
+            try:
+                if hasattr(first, "layout"):
+                    lay = first.layout()
+                    if lay is not None and lay.count() > 0:
+                        item = lay.itemAt(0)
+                        if item is not None and item.widget() is not None:
+                            return item.widget()
+                # otherwise return the first element directly
+                return first
+            except Exception:
+                return first
+
+        # Case C: last resort, just return obj
+        return obj
 
     def _close_tab(self, index):
         """Handles closing of tabs with proper cleanup."""
@@ -419,6 +485,8 @@ class MainWindow(QMainWindow):
             self.open_plate_girder()
         elif card_title == "Bolted to End Gusset":
             self.open_bolted_end_tension()
+        elif card_title == "Welded to End Gusset":
+            self.open_tension_welded_page()
 
     #-------------Functions-to-load-modules-in-Tabwidget-START---------------------------
 
@@ -598,6 +666,62 @@ class MainWindow(QMainWindow):
         # Update tab title and docking icons
         index = self.tab_bar.currentIndex()
         self.tab_bar.setTabText(index, title)
+
+    def open_tension_welded_page(self):
+        title = "Tension Member - Welded to End Gusset"   # UI tab title
+        self.clear_layout(self.main_widget_layout)
+
+        # Replace the class name below with the actual class for the tension-welded UI
+        # Possible names: TensionMemberWelded, TensionMemberWeldedGusset, WeldedToEndGusset
+        # Use the class that defines the user inputs GUI for this module.
+        tension_welded_widget = CustomWindow(title, Tension_welded, parent=self)
+
+
+        # Load the last Design Inputs - same pattern as the beam-column end plate
+        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
+
+        # Use backend.module_name() to form the filename like your other modules
+        last_design_file = str(tension_welded_widget.backend.module_name()).replace(' ', '') + ".osi"
+        last_design_file = os.path.join(last_design_folder, last_design_file)
+        last_design_dictionary = {}
+
+        # Create folder if it doesn't exist
+        if not os.path.isdir(last_design_folder):
+            os.makedirs(last_design_folder)
+
+        # Load previous design if file exists
+        if os.path.isfile(last_design_file):
+            with open(str(last_design_file), 'r') as last_design:
+                last_design_dictionary = yaml.safe_load(last_design)
+                tension_welded_widget.setDictToUserInputs(last_design_dictionary)
+
+        # Attach to main widget, wire signals same as end-plate
+        self.main_widget_instance = tension_welded_widget
+        tension_welded_widget.openNewTab.connect(self.handle_add_tab)
+        tension_welded_widget.downloadDatabase.connect(self.download_Database)
+        self.main_widget_layout.addWidget(tension_welded_widget)
+
+        # Update tab title and docking icons (same logic as other openers)
+        index = self.tab_bar.currentIndex()
+        #temporary change
+        entry = self.tab_widget_content[index]
+
+        if isinstance(entry, QWidget):
+            # [widget, tab_icons, input, graphics, output]
+            self.tab_widget_content[index] = [entry, True, True, True, True]
+        else:
+            # If already a sequence, make sure it has at least 5 items
+            try:
+                # set only what you need right now
+                self.tab_widget_content[index][1] = True
+            except Exception:
+                # Fallback: rewrite into a sane structure
+                self.tab_widget_content[index] = [entry, True, True, True, True]
+
+        self.tab_bar.setTabText(index, title)
+        self.tab_widget_content[index][1] = True  # Show docking icons
+        current_tab_data = self.tab_widget_content[index]
+        self.update_docking_icons(current_tab_data[1], current_tab_data[2], current_tab_data[3], current_tab_data[4])
 
     def open_bolted_end_tension(self):
         title = "Bolted to End Gusset"

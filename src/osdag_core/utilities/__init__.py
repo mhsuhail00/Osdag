@@ -39,7 +39,15 @@ from OCC.Core.Graphic3d import (Graphic3d_NOM_NEON_GNC, Graphic3d_NOT_ENV_CLOUDS
                                 Graphic3d_RenderingParams,
                                 Graphic3d_AspectLine3d)
 from OCC.Core.Aspect import Aspect_TOTP_RIGHT_LOWER, Aspect_FM_STRETCH, Aspect_FM_NONE
+from OCC.Core.TopoDS import TopoDS_Shape
+from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_BLACK
+import collections
+import logging
 import traceback
+
+# copied from old osdag change it if suhail doesent allows this 
+
+_log = logging.getLogger("osdag.utilities.osdag_display")
 
 def color_the_edges(shp, display, color, width):
     """
@@ -85,21 +93,183 @@ def color_the_edges(shp, display, color, width):
     # return shapeList
 
 
-def set_default_edge_style(shp, display):
-    color_the_edges(shp, display, Quantity_Color(Quantity_NOC_BLACK), 0.5)
-    # return shps
+def set_default_edge_style(shapes, display):
+    """Apply default edge style to a sequence of shapes or a single TopoDS_Shape.
 
-
-def osdag_display_shape(display, shapes, material=None, texture=None, color=None, transparency=None, update=False, label=[], canvas=None):
-    set_default_edge_style(shapes, display)
-    ais_object = display.DisplayShape(shapes, material, texture, color, transparency, update=update)
-    ais = ais_object[0] if isinstance(ais_object, list) else ais_object
-    if canvas.model_ais_objects.get(label[0]) is None:
-        canvas.model_ais_objects[label[0]] = [ais]
+    Accepts:
+      - an iterable of TopoDS_Shape (list/tuple/etc.)
+      - a single TopoDS_Shape (including TopoDS_Compound)
+    """
+    # normalize: if a single TopoDS_Shape is passed, make it iterable
+    if isinstance(shapes, TopoDS_Shape):
+        shapes_iter = [shapes]
     else:
-        canvas.model_ais_objects[label[0]] += [ais]
-    # Activate selection mode for whole entity
-    display.Context.Activate(ais, 0)
+        shapes_iter = shapes
+
+    # If shapes_iter is still not iterable (None or weird type), bail gracefully
+    try:
+        iterator = iter(shapes_iter)
+    except TypeError:
+        # nothing sensible to do
+        print(f"⚠️ set_default_edge_style: expected iterable or TopoDS_Shape, got {type(shapes).__name__}")
+        return
+
+    for shp in iterator:
+        if shp is None:
+            continue
+        try:
+            # ensure shp is a TopoDS_Shape before passing on
+            if not isinstance(shp, TopoDS_Shape):
+                # sometimes osdag passes wrapper objects (they may expose .Shape()); try to extract
+                try:
+                    candidate = shp.Shape() if hasattr(shp, "Shape") else getattr(shp, "Shape", None)
+                    if isinstance(candidate, TopoDS_Shape):
+                        shp = candidate
+                    else:
+                        print(f"⚠️ set_default_edge_style: skipping non-shape item of type {type(shp).__name__}")
+                        continue
+                except Exception:
+                    print(f"⚠️ set_default_edge_style: failed to extract TopoDS_Shape from {type(shp).__name__}")
+                    continue
+
+            # safe call to color edges (existing function)
+            color_the_edges(shp, display, Quantity_Color(Quantity_NOC_BLACK), 0.5)
+        except Exception as e:
+            # don't let coloring break the whole display flow
+            print(f"⚠️ set_default_edge_style: error while styling shape: {e}")
+            continue
+
+
+
+def osdag_display_shape(display, shapes, material=None, texture=None, color=None, transparency=None, update=False, label=None, canvas=None):
+    """
+    Safe wrapper around the display's DisplayShape call.
+    - normalizes canvas (creates a dummy if missing)
+    - avoids passing strings / None into OCC display
+    - accepts single TopoDS_Shape or iterables of shapes
+    - stores AIS objects in canvas.model_ais_objects if available
+    """
+
+    # --- normalize label ---
+    if label is None:
+        label = []
+    # ensure label is a sequence for indexing
+    if not isinstance(label, (list, tuple)):
+        label = [label]
+
+    # --- normalize canvas ---
+    if canvas is None:
+        # try to obtain canvas from display if available
+        canvas_candidate = getattr(display, "canvas", None)
+        if canvas_candidate is not None:
+            canvas = canvas_candidate
+
+    if canvas is None:
+        # fallback dummy canvas to avoid AttributeError
+        class _DummyCanvas:
+            def __init__(self):
+                self.model_ais_objects = {}
+                self.model_ais_locked = set()
+        canvas = _DummyCanvas()
+    else:
+        # ensure required attributes exist
+        if not hasattr(canvas, "model_ais_objects") or canvas.model_ais_objects is None:
+            try:
+                canvas.model_ais_objects = {}
+            except Exception:
+                canvas.model_ais_objects = {}
+        if not hasattr(canvas, "model_ais_locked") or canvas.model_ais_locked is None:
+            try:
+                canvas.model_ais_locked = set()
+            except Exception:
+                canvas.model_ais_locked = set()
+
+    # --- small helper to detect shape-likeness ---
+    def _is_topodsshape(obj):
+        return isinstance(obj, TopoDS_Shape)
+
+    # --- If shapes is a simple string or None, skip initial DisplayShape and return ---
+    if shapes is None:
+        _log.debug("osdag_display_shape: shapes is None — nothing to display.")
+        return
+
+    if isinstance(shapes, str):
+        _log.debug("osdag_display_shape: shapes is a string (%s) — skipping direct DisplayShape call; relying on caller's logic.", shapes)
+        return
+
+    # --- If shapes is a single TopoDS_Shape, convert to single item list for consistent handling ---
+    if _is_topodsshape(shapes):
+        shapes_to_draw = [shapes]
+    # If it's an iterable (list/tuple/set), keep it
+    elif isinstance(shapes, (list, tuple, set, collections.deque)):
+        shapes_to_draw = list(shapes)
+    else:
+        # Try to extract a shape from common wrapper objects (.Shape() or .Shape attr)
+        extracted = None
+        try:
+            if hasattr(shapes, "Shape") and callable(getattr(shapes, "Shape")):
+                extracted = shapes.Shape()
+            elif hasattr(shapes, "Shape"):
+                extracted = getattr(shapes, "Shape")
+        except Exception:
+            extracted = None
+
+        if extracted is not None and _is_topodsshape(extracted):
+            shapes_to_draw = [extracted]
+        else:
+            # As a last resort, attempt to let display handle it (may raise TypeError)
+            shapes_to_draw = [shapes]
+
+    # --- Apply default edge style if available (guarded) ---
+    try:
+        # If set_default_edge_style is available in this module, call it; otherwise skip
+        if "set_default_edge_style" in globals():
+            try:
+                set_default_edge_style(shapes_to_draw, display)
+            except Exception as e:
+                _log.debug("osdag_display_shape: set_default_edge_style skipped/failed: %s", e)
+    except Exception:
+        pass
+
+    # --- Now call display.DisplayShape for each shape / collection safely ---
+    # Some display implementations accept a list, some require single shape; handle both.
+    try:
+        # If shapes_to_draw contains exactly one item that is a TopoDS_Shape, pass it directly
+        item_to_pass = shapes_to_draw[0] if len(shapes_to_draw) == 1 else shapes_to_draw
+        ais_object = display.DisplayShape(item_to_pass, material, texture, color, transparency, update=update)
+    except TypeError as te:
+        # DisplayShape rejected the object type — log and skip drawing
+        _log.warning("osdag_display_shape: display.DisplayShape rejected object (%s): %s", type(item_to_pass), te)
+        return
+    except Exception as e:
+        _log.exception("osdag_display_shape: unexpected error from display.DisplayShape: %s", e)
+        return
+
+    # Normalize ais_object to a single AIS entry or list
+    ais_list = ais_object if isinstance(ais_object, list) else [ais_object]
+
+    # Store AIS references in canvas.model_ais_objects under the label key (if provided)
+    try:
+        if label and len(label) > 0 and label[0] is not None:
+            key = label[0]
+            if canvas.model_ais_objects.get(key) is None:
+                canvas.model_ais_objects[key] = list(ais_list)
+            else:
+                canvas.model_ais_objects[key] += list(ais_list)
+    except Exception:
+        _log.debug("osdag_display_shape: could not store AIS objects on canvas.model_ais_objects (continuing)")
+
+    # Activate selection mode for whole entity if display context exists
+    try:
+        for ais in ais_list:
+            if ais is not None and hasattr(display, "Context") and getattr(display, "Context") is not None:
+                try:
+                    display.Context.Activate(ais, 0)
+                except Exception:
+                    # some AIS objects may not be activatable; ignore
+                    pass
+    except Exception:
+        _log.debug("osdag_display_shape: error while activating AIS objects (ignored)")
 
 def rgb_color(r, g, b):
     return Quantity_Color(r, g, b, Quantity_NOC_BLACK)

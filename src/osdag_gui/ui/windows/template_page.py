@@ -27,6 +27,29 @@ from osdag_core.cad.common_logic import CommonDesignLogic
 from osdag_gui.data.database.database_config import *
 
 from osdag_gui.__config__ import CAD_BACKEND
+from PySide6.QtWidgets import QTextEdit
+
+#temporary change
+
+import logging
+
+
+def remove_deleted_textedit_handlers():
+    root = logging.getLogger()
+    for h in list(root.handlers):
+        try:
+            te = getattr(h, "key", None)  # Common.py stores widget as self.key
+            if isinstance(te, QTextEdit):
+                # If QTextEdit is deleted: remove handler
+                try:
+                    if te is None or not te.isVisible():
+                        root.removeHandler(h)
+                except RuntimeError:
+                    # definitely deleted C++ object
+                    root.removeHandler(h)
+        except Exception:
+            pass
+
 
 class CustomWindow(QWidget):
     openNewTab = Signal(str)
@@ -1463,6 +1486,20 @@ class CustomWindow(QWidget):
                 print("Hover Dictionary: ", main.hover_dict)
 
                 print("Calling 3D Model from CAD")
+                # temporary change
+                import importlib
+                _common_logic = importlib.import_module("osdag_core.cad.common_logic")
+                _orig_display_shape = getattr(_common_logic, "osdag_display_shape", None)
+                if _orig_display_shape is not None:
+                    def _safe_display_shape(display, shape, *args, **kwargs):
+                        # ensure canvas is present (prefer this widget, then commLogicObj, then display)
+                        canvas = kwargs.get("canvas", None) or getattr(self, "cad_widget", None) or getattr(self.commLogicObj, "cad_widget", None) or display
+                        kwargs["canvas"] = canvas
+                        # forward all args/kwargs (handles color, label, etc.)
+                        return _orig_display_shape(display, shape, *args, **kwargs)
+                    setattr(_common_logic, "osdag_display_shape", _safe_display_shape)
+
+
                 self.commLogicObj.call_3DModel(status, main)
                 # Store the design instance for later use in report generation
                 if hasattr(self.commLogicObj, 'design_obj'):
@@ -1636,7 +1673,14 @@ class CustomWindow(QWidget):
                     self.designPrefDialog.ui.tabWidget.tabs.indexOf(tab), f(input_dock_key.currentText()))
             elif change_typ == TYPE_REMOVE_TAB:
 
-                if tab.objectName() != f(input_dock_key.currentText()):
+                # tolerant call: prefer zero-arg signature, fall back to one-arg if needed - temporary change
+                try:
+                    sel = f()
+                except TypeError:
+                    sel = f(input_dock_key.currentText())
+                if tab.objectName() != sel:
+
+
                     self.designPrefDialog.ui.tabWidget.tabs.removeTab(
                         self.designPrefDialog.ui.tabWidget.tabs.indexOf(tab))
                 # if tab:
@@ -1912,6 +1956,7 @@ class CadComponentCheckbox(QWidget):
         background = "gradient_light"
         if not self.parent.theme.is_light():
             background = "gradient_dark"
+
         check_box.clicked.connect(lambda: f(self.parent, background))
 
 # Standalone testing

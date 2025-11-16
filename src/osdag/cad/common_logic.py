@@ -1667,7 +1667,7 @@ class CommonDesignLogic(object):
         """
         :return: The calculated values/parameters to create 3D CAD model of individual components.
         """
-        T = self.module_class
+        T = self.module_object
 
         # Types of connections =  #'Angles', 'Back to Back Angles', 'Star Angles', 'Channels', 'Back to Back Channels'
         if self.connection == KEY_DISP_TENSION_BOLTED:
