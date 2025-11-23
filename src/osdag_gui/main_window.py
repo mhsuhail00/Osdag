@@ -35,6 +35,8 @@ from osdag_core.design_type.connection.beam_column_end_plate import BeamColumnEn
 from osdag_core.design_type.tension_member.tension_bolted import Tension_bolted
 
 from osdag_core.design_type.plate_girder.weldedPlateGirder import PlateGirderWelded
+from osdag_core.design_type.compression_member.Column import ColumnDesign
+
 import openpyxl
 
 class MainWindow(QMainWindow):
@@ -419,6 +421,9 @@ class MainWindow(QMainWindow):
             self.open_plate_girder()
         elif card_title == "Bolted to End Gusset":
             self.open_bolted_end_tension()
+        elif card_title == "Column":
+            self.open_column_design()
+
 
     #-------------Functions-to-load-modules-in-Tabwidget-START---------------------------
 
@@ -537,6 +542,38 @@ class MainWindow(QMainWindow):
         self.main_widget_layout.addWidget(fin_plate)
         index = self.tab_bar.currentIndex()
         self.tab_bar.setTabText(index, title)
+        
+        
+    def open_column_design(self):
+        """Opens the Column Design module."""
+        title = "Column Design"
+        self.clear_layout(self.main_widget_layout)
+        column_design = CustomWindow(title, ColumnDesign, parent=self)
+
+        # Load the last Design Inputs-start------------------------------------
+        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
+        last_design_file = str(column_design.backend.module_name()).replace(' ', '') + ".osi"
+        last_design_file = os.path.join(last_design_folder, last_design_file)
+        last_design_dictionary = {}
+
+        # Ensure folder and file exist safely
+        if not os.path.isdir(last_design_folder):
+            os.makedirs(last_design_folder, exist_ok=True)
+
+        if os.path.isfile(last_design_file):
+                with open(str(last_design_file), 'r') as last_design:
+                    last_design_dictionary = yaml.safe_load(last_design)
+                    column_design.setDictToUserInputs(last_design_dictionary)
+
+        # Load the last Design Inputs-end------------------------------------
+
+        self.main_widget_instance = column_design
+        column_design.openNewTab.connect(self.handle_add_tab)
+        column_design.downloadDatabase.connect(self.download_Database)
+        self.main_widget_layout.addWidget(column_design)
+        index = self.tab_bar.currentIndex()
+        self.tab_bar.setTabText(index, title)
+
     
     def open_plate_girder(self):
         title = "Plate Girder"
@@ -826,5 +863,6 @@ if __name__ == "__main__":
     main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec())
-
-
+    
+    
+    

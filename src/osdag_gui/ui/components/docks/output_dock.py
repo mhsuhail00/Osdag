@@ -28,6 +28,7 @@ from osdag_core.design_type.connection.cleat_angle_connection import CleatAngleC
 from osdag_core.design_type.connection.end_plate_connection import EndPlateConnection
 from osdag_core.design_type.connection.beam_cover_plate_weld import BeamCoverPlateWeld
 from osdag_core.design_type.connection.beam_cover_plate import BeamCoverPlate
+from osdag_core.design_type.compression_member.Column import ColumnDesign
 
 # Spacing Detail
 from osdag_gui.ui.components.output_details.b2bCoverPlateWelded import B2BCoverPlateWeldedDetails
@@ -598,6 +599,8 @@ class OutputDock(QWidget):
                         self.run_spacing_script(0,0,EndPlateDetails,main)
                     elif main.module_name()==KEY_DISP_TENSION_BOLTED:
                         self.run_spacing_script(0,0,TensionBoltedDetails, main)
+                    elif main.module_name()==KEY_DISP_COMPRESSION:
+                        return
                     # return
                     break
                 
