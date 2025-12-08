@@ -645,10 +645,9 @@ class MainWindow(QMainWindow):
         self.common_open_module(BeamColumnEndPlate, "Beam-to-Column End Plate Connection")
 
     def open_tension_welded_page(self):
-        title = "Tension Member: Welded to End Gusset"
-        self.clear_layout(self.main_widget_layout)
-        tension_welded = CustomWindow(title, Tension_welded, parent=self)
+        self.common_open_module(Tension_welded, "Tension Member: Welded to End Gusset")
 
+<<<<<<< HEAD
         # Load the last Design Inputs-start------------------------------------
         last_design_folder = os.path.join('ResourceFiles', 'last_designs')
         last_design_file = str(tension_welded.backend.module_name()).replace(' ', '') + ".osi"
@@ -674,11 +673,12 @@ class MainWindow(QMainWindow):
         self.tab_bar.setTabText(index, title)
 
 
+=======
+>>>>>>> 7657a1a4 (-Reduced redundant code for module calling in main_window)
     def open_lap_joint_welded(self):
-        title = "Lap Joint Welded Connection"
-        self.clear_layout(self.main_widget_layout)
-        lap_joint_welded = CustomWindow(title, LapJointWelded, parent=self)
+        self.common_open_module(LapJointWelded, "Lap Joint Welded Connection")
 
+<<<<<<< HEAD
         # Load the last Design Inputs-start------------------------------------
         last_design_folder = os.path.join('ResourceFiles', 'last_designs')
         last_design_file = str(lap_joint_welded.backend.module_name()).replace(' ', '') + ".osi"
@@ -733,11 +733,15 @@ class MainWindow(QMainWindow):
         index = self.tab_bar.currentIndex()
         self.tab_bar.setTabText(index, title)
 
+=======
+    def open_lap_joint_bolted(self):
+        self.common_open_module(LapJointBolted, "Lap Joint Bolted Connection")
+        
+>>>>>>> 7657a1a4 (-Reduced redundant code for module calling in main_window)
     def open_butt_joint_bolted(self):
-        title = "Butt Joint Bolted Connection"
-        self.clear_layout(self.main_widget_layout)
-        butt_joint_bolted = CustomWindow(title, ButtJointBolted, parent=self)
+        self.common_open_module(ButtJointBolted, "Butt Joint Bolted Connection")
 
+<<<<<<< HEAD
         # Load the last Design Inputs-start------------------------------------
         last_design_folder = os.path.join('ResourceFiles', 'last_designs')
         last_design_file = str(butt_joint_bolted.backend.module_name()).replace(' ', '') + ".osi"
@@ -819,6 +823,10 @@ class MainWindow(QMainWindow):
         self.main_widget_layout.addWidget(flexure_purlin)
         index = self.tab_bar.currentIndex()
         self.tab_bar.setTabText(index, title)
+=======
+    def open_butt_joint_welded(self):
+        self.common_open_module(ButtJointWelded, "Butt Joint Welded Connection")  
+>>>>>>> 7657a1a4 (-Reduced redundant code for module calling in main_window)
 
     def open_bolted_end_tension(self):
         self.common_open_module(Tension_bolted, "Bolted to End Gusset")
