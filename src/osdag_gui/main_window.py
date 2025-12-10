@@ -647,247 +647,35 @@ class MainWindow(QMainWindow):
     def open_tension_welded_page(self):
         self.common_open_module(Tension_welded, "Tension Member: Welded to End Gusset")
 
-<<<<<<< HEAD
-        # Load the last Design Inputs-start------------------------------------
-        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-        last_design_file = str(tension_welded.backend.module_name()).replace(' ', '') + ".osi"
-        last_design_file = os.path.join(last_design_folder, last_design_file)
-        last_design_dictionary = {}
-
-        # Create folder if it doesn't exist
-        if not os.path.isdir(last_design_folder):
-            os.makedirs(last_design_folder)
-
-        # Load previous design if file exists
-        if os.path.isfile(last_design_file):
-            with open(str(last_design_file), 'r') as last_design:
-                last_design_dictionary = yaml.safe_load(last_design)
-                tension_welded.setDictToUserInputs(last_design_dictionary)
-        # Load the last Design Inputs-end------------------------------------
-
-        self.main_widget_instance = tension_welded
-        tension_welded.openNewTab.connect(self.handle_add_tab)
-        tension_welded.downloadDatabase.connect(self.download_Database)
-        self.main_widget_layout.addWidget(tension_welded)
-        index = self.tab_bar.currentIndex()
-        self.tab_bar.setTabText(index, title)
-
-
-=======
->>>>>>> 7657a1a4 (-Reduced redundant code for module calling in main_window)
     def open_lap_joint_welded(self):
         self.common_open_module(LapJointWelded, "Lap Joint Welded Connection")
 
-<<<<<<< HEAD
-        # Load the last Design Inputs-start------------------------------------
-        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-        last_design_file = str(lap_joint_welded.backend.module_name()).replace(' ', '') + ".osi"
-        last_design_file = os.path.join(last_design_folder, last_design_file)
-        last_design_dictionary = {}
-
-        # Create folder if it doesn't exist
-        if not os.path.isdir(last_design_folder):
-            os.makedirs(last_design_folder)
-
-        # Load previous design if file exists
-        if os.path.isfile(last_design_file):
-            with open(str(last_design_file), 'r') as last_design:
-                last_design_dictionary = yaml.safe_load(last_design)
-                lap_joint_welded.setDictToUserInputs(last_design_dictionary)
-        # Load the last Design Inputs-end------------------------------------
-
-        self.main_widget_instance = lap_joint_welded
-        lap_joint_welded.openNewTab.connect(self.handle_add_tab)
-        lap_joint_welded.downloadDatabase.connect(self.download_Database)
-        self.main_widget_layout.addWidget(lap_joint_welded)
-        index = self.tab_bar.currentIndex()
-        self.tab_bar.setTabText(index, title)
-
-
-    def open_lap_joint_bolted(self):
-        title = "Lap Joint Bolted Connection"
-        self.clear_layout(self.main_widget_layout)
-        lap_joint_bolted = CustomWindow(title, LapJointBolted, parent=self)
-
-        # Load the last Design Inputs-start------------------------------------
-        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-        last_design_file = str(lap_joint_bolted.backend.module_name()).replace(' ', '') + ".osi"
-        last_design_file = os.path.join(last_design_folder, last_design_file)
-        last_design_dictionary = {}
-
-        # Create folder if it doesn't exist
-        if not os.path.isdir(last_design_folder):
-            os.makedirs(last_design_folder)
-
-        # Load previous design if file exists
-        if os.path.isfile(last_design_file):
-            with open(str(last_design_file), 'r') as last_design:
-                last_design_dictionary = yaml.safe_load(last_design)
-                lap_joint_bolted.setDictToUserInputs(last_design_dictionary)
-        # Load the last Design Inputs-end------------------------------------
-
-        self.main_widget_instance = lap_joint_bolted
-        lap_joint_bolted.openNewTab.connect(self.handle_add_tab)
-        lap_joint_bolted.downloadDatabase.connect(self.download_Database)
-        self.main_widget_layout.addWidget(lap_joint_bolted)
-        index = self.tab_bar.currentIndex()
-        self.tab_bar.setTabText(index, title)
-
-=======
     def open_lap_joint_bolted(self):
         self.common_open_module(LapJointBolted, "Lap Joint Bolted Connection")
         
->>>>>>> 7657a1a4 (-Reduced redundant code for module calling in main_window)
     def open_butt_joint_bolted(self):
         self.common_open_module(ButtJointBolted, "Butt Joint Bolted Connection")
 
-<<<<<<< HEAD
-        # Load the last Design Inputs-start------------------------------------
-        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-        last_design_file = str(butt_joint_bolted.backend.module_name()).replace(' ', '') + ".osi"
-        last_design_file = os.path.join(last_design_folder, last_design_file)
-        last_design_dictionary = {}
-
-        # Create folder if it doesn't exist
-        if not os.path.isdir(last_design_folder):
-            os.makedirs(last_design_folder)
-
-        # Load previous design if file exists
-        if os.path.isfile(last_design_file):
-            with open(str(last_design_file), 'r') as last_design:
-                last_design_dictionary = yaml.safe_load(last_design)
-                butt_joint_bolted.setDictToUserInputs(last_design_dictionary)
-        # Load the last Design Inputs-end------------------------------------
-
-        self.main_widget_instance = butt_joint_bolted
-        butt_joint_bolted.openNewTab.connect(self.handle_add_tab)
-        butt_joint_bolted.downloadDatabase.connect(self.download_Database)
-        self.main_widget_layout.addWidget(butt_joint_bolted)
-        index = self.tab_bar.currentIndex()
-        self.tab_bar.setTabText(index, title)
-
-    def open_butt_joint_welded(self):
-        title = "Butt Joint Welded Connection"
-        self.clear_layout(self.main_widget_layout)
-        butt_joint_welded = CustomWindow(title, ButtJointWelded, parent=self)
-
-        # Load the last Design Inputs-start------------------------------------
-        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-        last_design_file = str(butt_joint_welded.backend.module_name()).replace(' ', '') + ".osi"
-        last_design_file = os.path.join(last_design_folder, last_design_file)
-        last_design_dictionary = {}
-
-        # Create folder if it doesn't exist
-        if not os.path.isdir(last_design_folder):
-            os.makedirs(last_design_folder)
-
-        # Load previous design if file exists
-        if os.path.isfile(last_design_file):
-            with open(str(last_design_file), 'r') as last_design:
-                last_design_dictionary = yaml.safe_load(last_design)
-                butt_joint_welded.setDictToUserInputs(last_design_dictionary)
-        # Load the last Design Inputs-end------------------------------------
-
-        self.main_widget_instance = butt_joint_welded
-        butt_joint_welded.openNewTab.connect(self.handle_add_tab)
-        butt_joint_welded.downloadDatabase.connect(self.download_Database)
-        self.main_widget_layout.addWidget(butt_joint_welded)
-        index = self.tab_bar.currentIndex()
-        self.tab_bar.setTabText(index, title)
-
     def open_flexure_purlin(self):
-        title = "Purlin"
-        self.clear_layout(self.main_widget_layout)
-        flexure_purlin = CustomWindow(title, Flexure_Purlin, parent=self)
+        self.common_open_module(Flexure_Purlin, "Purlin")
 
-        # Load the last Design Inputs-start------------------------------------
-        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-        last_design_file = str(flexure_purlin.backend.module_name()).replace(' ', '') + ".osi"
-        last_design_file = os.path.join(last_design_folder, last_design_file)
-        last_design_dictionary = {}
-
-        # Create folder if it doesn't exist
-        if not os.path.isdir(last_design_folder):
-            os.makedirs(last_design_folder)
-
-        # Load previous design if file exists
-        if os.path.isfile(last_design_file):
-            with open(str(last_design_file), 'r') as last_design:
-                last_design_dictionary = yaml.safe_load(last_design)
-                flexure_purlin.setDictToUserInputs(last_design_dictionary)
-        # Load the last Design Inputs-end------------------------------------
-
-        self.main_widget_instance = flexure_purlin
-        flexure_purlin.openNewTab.connect(self.handle_add_tab)
-        flexure_purlin.downloadDatabase.connect(self.download_Database)
-        self.main_widget_layout.addWidget(flexure_purlin)
-        index = self.tab_bar.currentIndex()
-        self.tab_bar.setTabText(index, title)
-=======
     def open_butt_joint_welded(self):
         self.common_open_module(ButtJointWelded, "Butt Joint Welded Connection")  
->>>>>>> 7657a1a4 (-Reduced redundant code for module calling in main_window)
+
+    def open_column_design(self):
+        self.common_open_module(ColumnDesign, "Column Design")
+
+    def open_beam_cover_plate_weld_moment_connection(self):
+        self.common_open_module(BeamCoverPlateWeld, "Cover Plate Welded")
 
     def open_bolted_end_tension(self):
         self.common_open_module(Tension_bolted, "Bolted to End Gusset")
         
     def open_flexure_member(self):
-        title = "Simply Supported Beam"
-        self.clear_layout(self.main_widget_layout)
-        flexure_ss = CustomWindow(title, Flexure, parent=self)
-
-        # Load the last Design Inputs-start------------------------------------
-        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-        last_design_file = str(flexure_ss.backend.module_name()).replace(' ', '') + ".osi"
-        last_design_file = os.path.join(last_design_folder, last_design_file)
-        last_design_dictionary = {}
-
-        # Create folder if it doesn't exist
-        if not os.path.isdir(last_design_folder):
-            os.makedirs(last_design_folder)
-
-        # Load previous design if file exists
-        if os.path.isfile(last_design_file):
-            with open(str(last_design_file), 'r') as last_design:
-                last_design_dictionary = yaml.safe_load(last_design)
-                flexure_ss.setDictToUserInputs(last_design_dictionary)
-        # Load the last Design Inputs-end------------------------------------
-
-        self.main_widget_instance = flexure_ss
-        flexure_ss.openNewTab.connect(self.handle_add_tab)
-        flexure_ss.downloadDatabase.connect(self.download_Database)
-        self.main_widget_layout.addWidget(flexure_ss)
-        index = self.tab_bar.currentIndex()
-        self.tab_bar.setTabText(index, title)
+        self.common_open_module(Flexure, "Simply Supported Beam")
         
     def open_flexure_cantilever_member(self):
-        title = "Cantilever Beam"
-        self.clear_layout(self.main_widget_layout)
-        flexure_c = CustomWindow(title, Flexure_Cantilever, parent=self)
-
-        # Load the last Design Inputs-start------------------------------------
-        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-        last_design_file = str(flexure_c.backend.module_name()).replace(' ', '') + ".osi"
-        last_design_file = os.path.join(last_design_folder, last_design_file)
-        last_design_dictionary = {}
-
-        # Create folder if it doesn't exist
-        if not os.path.isdir(last_design_folder):
-            os.makedirs(last_design_folder)
-
-        # Load previous design if file exists
-        if os.path.isfile(last_design_file):
-            with open(str(last_design_file), 'r') as last_design:
-                last_design_dictionary = yaml.safe_load(last_design)
-                flexure_c.setDictToUserInputs(last_design_dictionary)
-        # Load the last Design Inputs-end------------------------------------
-
-        self.main_widget_instance = flexure_c
-        flexure_c.openNewTab.connect(self.handle_add_tab)
-        flexure_c.downloadDatabase.connect(self.download_Database)
-        self.main_widget_layout.addWidget(flexure_c)
-        index = self.tab_bar.currentIndex()
-        self.tab_bar.setTabText(index, title)        
+        self.common_open_module(Flexure_Cantilever, "Cantilever Beam")
     
     def open_struts_in_trusses_compression_member(self):
         self.common_open_module(Compression, "Struts in Trusses")
