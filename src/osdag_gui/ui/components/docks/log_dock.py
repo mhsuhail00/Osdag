@@ -37,7 +37,8 @@ class LogDock(QWidget):
         self.append_log(f"[{QDateTime.currentDateTime().toString('yyyy-MM-dd hh:mm:ss')}] Log initialized", "info")
 
         self.setLayout(layout)
-        self.show()  # Show init text
+        # NOTE: Do NOT call self.show() here - it creates a standalone window on Linux
+        # before the widget is added to its parent. Visibility is managed by template_page.
 
     def append_log(self, message, log_level="info"):
         """Append a message to the log display with specified color."""
