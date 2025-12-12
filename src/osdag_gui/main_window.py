@@ -47,6 +47,8 @@ from osdag_core.design_type.connection.beam_beam_end_plate_splice import BeamBea
 from osdag_core.design_type.connection.column_end_plate import ColumnEndPlate
 from osdag_core.design_type.connection.column_cover_plate import ColumnCoverPlate
 from osdag_core.design_type.connection.column_cover_plate_weld import ColumnCoverPlateWeld
+from osdag_core.design_type.flexural_member.flexure import Flexure
+from osdag_core.design_type.flexural_member.flexure_cantilever import Flexure_Cantilever
 
 import openpyxl
 
@@ -457,6 +459,10 @@ class MainWindow(QMainWindow):
             self.open_column_cover_plate_connection()
         elif card_title == "Column Cover Plate Welded":
             self.open_column_cover_plate_weld_connection() 
+        elif card_title == "Simply Supported Beam":
+            self.open_flexure_member()
+        elif card_title == "Cantilever Beam":
+            self.open_flexure_cantilever_member()
         elif card_title == "Struts in Trusses":
             self.open_struts_in_trusses_compression_member()
 
@@ -1030,6 +1036,64 @@ class MainWindow(QMainWindow):
         self.tab_widget_content[index][1] = True
         current_tab_data = self.tab_widget_content[index]
         self.update_docking_icons(current_tab_data[1], current_tab_data[2], current_tab_data[3], current_tab_data[4])
+        
+    def open_flexure_member(self):
+        title = "Simply Supported Beam"
+        self.clear_layout(self.main_widget_layout)
+        flexure_ss = CustomWindow(title, Flexure, parent=self)
+
+        # Load the last Design Inputs-start------------------------------------
+        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
+        last_design_file = str(flexure_ss.backend.module_name()).replace(' ', '') + ".osi"
+        last_design_file = os.path.join(last_design_folder, last_design_file)
+        last_design_dictionary = {}
+
+        # Create folder if it doesn't exist
+        if not os.path.isdir(last_design_folder):
+            os.makedirs(last_design_folder)
+
+        # Load previous design if file exists
+        if os.path.isfile(last_design_file):
+            with open(str(last_design_file), 'r') as last_design:
+                last_design_dictionary = yaml.safe_load(last_design)
+                flexure_ss.setDictToUserInputs(last_design_dictionary)
+        # Load the last Design Inputs-end------------------------------------
+
+        self.main_widget_instance = flexure_ss
+        flexure_ss.openNewTab.connect(self.handle_add_tab)
+        flexure_ss.downloadDatabase.connect(self.download_Database)
+        self.main_widget_layout.addWidget(flexure_ss)
+        index = self.tab_bar.currentIndex()
+        self.tab_bar.setTabText(index, title)
+        
+    def open_flexure_cantilever_member(self):
+        title = "Cantilever Beam"
+        self.clear_layout(self.main_widget_layout)
+        flexure_c = CustomWindow(title, Flexure_Cantilever, parent=self)
+
+        # Load the last Design Inputs-start------------------------------------
+        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
+        last_design_file = str(flexure_c.backend.module_name()).replace(' ', '') + ".osi"
+        last_design_file = os.path.join(last_design_folder, last_design_file)
+        last_design_dictionary = {}
+
+        # Create folder if it doesn't exist
+        if not os.path.isdir(last_design_folder):
+            os.makedirs(last_design_folder)
+
+        # Load previous design if file exists
+        if os.path.isfile(last_design_file):
+            with open(str(last_design_file), 'r') as last_design:
+                last_design_dictionary = yaml.safe_load(last_design)
+                flexure_c.setDictToUserInputs(last_design_dictionary)
+        # Load the last Design Inputs-end------------------------------------
+
+        self.main_widget_instance = flexure_c
+        flexure_c.openNewTab.connect(self.handle_add_tab)
+        flexure_c.downloadDatabase.connect(self.download_Database)
+        self.main_widget_layout.addWidget(flexure_c)
+        index = self.tab_bar.currentIndex()
+        self.tab_bar.setTabText(index, title)
 
     
     def open_struts_in_trusses_compression_member(self):
