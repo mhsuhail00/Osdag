@@ -398,12 +398,32 @@ class InputDock(QWidget):
         self.tooltip_timer.start(3000)
     
     def toggle_lock(self):
+        """Toggle between locked and unlocked states. Used for user interaction."""
         if self.state_locked:
+            # When unlocking, just clear output fields
+            # NOTE: We intentionally do NOT call flush_cad_widget() here anymore
+            # because it causes heap corruption ("malloc(): unsorted double linked list corrupted")
+            # The CAD widget will be properly cleaned up when a new design is run
+            # via cleanup_for_new_model() in display_3DModel()
             self.parent.clear_output_fields()
-            self.parent.flush_cad_widget()
         self.state_locked = not self.state_locked
         self.lock_btn.setChecked(self.state_locked)
         self.scroll_area.setDisabled(self.state_locked)
+        self.update_lock_icon()
+    
+    def lock(self):
+        """
+        Explicitly lock the input dock without toggling.
+        This is used after design completion to ensure the dock is locked
+        WITHOUT clearing output fields (which toggle_lock would do if already locked).
+        """
+        if self.state_locked:
+            # Already locked, do nothing to preserve output fields
+            return
+        # Lock the dock
+        self.state_locked = True
+        self.lock_btn.setChecked(True)
+        self.scroll_area.setDisabled(True)
         self.update_lock_icon()
 
 
