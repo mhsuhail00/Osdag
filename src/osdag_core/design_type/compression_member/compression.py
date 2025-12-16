@@ -26,6 +26,9 @@ class Compression(Member):
         # print(f"Here Compression")
         super(Compression, self).__init__()
 
+        self.design_status = False
+        self.hover_dict = {}
+
     ###############################################
     # Design Preference Functions Start
     ###############################################
@@ -374,7 +377,7 @@ class Compression(Member):
         t11 = (KEY_END2, KEY_DISP_END2, TYPE_COMBOBOX, VALUES_STRUT_END2, True, 'No Validator')
         options_list.append(t11)
 
-        t12 = (KEY_IMAGE_two, None, TYPE_IMAGE_COMPRESSION, str(files("osdag_core.data.ResourceFiles.images").joinpath("RRRRstrut.png")), True, 'No Validator')
+        t12 = (KEY_IMAGE_two, None, TYPE_IMAGE, str(files("osdag_core.data.ResourceFiles.images").joinpath("compression_fixed.png")), True, 'No Validator')
         options_list.append(t12)
 
         t7 = (None, DISP_TITLE_FSL, TYPE_TITLE, None, True, 'No Validator')
@@ -418,12 +421,7 @@ class Compression(Member):
                [str(files("osdag_core.data.ResourceFiles.images").joinpath("spacing_1.png")), 400, 278, "3 x 3 pattern considered"])  # [image, width, height, caption]
         spacing.append(t99)
 
-        if self.sec_profile == 'Star Angles':
-            t16 = (KEY_OUT_BOLTS_ONE_LINE_S, KEY_OUT_DISP_BOLTS_ONE_LINE_S, TYPE_TEXTBOX,
-                   int(self.plate.bolts_one_line/2) if status else '', True)
-            spacing.append(t16)
-        else:
-            pass
+        # Note: Star Angles not supported in compression strut module
 
         t16 = (KEY_OUT_BOLTS_ONE_LINE, KEY_OUT_DISP_BOLTS_ONE_LINE, TYPE_TEXTBOX, self.plate.bolts_one_line if status else '',True)
         spacing.append(t16)
@@ -447,7 +445,7 @@ class Compression(Member):
 
     def memb_pattern(self, status):
 
-        if self.sec_profile in ['Angles', 'Back to Back Angles', 'Star Angles']:
+        if self.sec_profile in [Profile_name_1, Profile_name_2, Profile_name_3]:
             image = str(files("osdag_core.data.ResourceFiles.images").joinpath("L.png"))
             x, y = 400, 202
 
@@ -503,50 +501,33 @@ class Compression(Member):
         elif self == 'Roller':
             return str(files("osdag_core.data.ResourceFiles.images").joinpath("RRRRstrut.png"))
 
-    def fn_end2_image(self):
-
-        end1 = self[0]
-        end2 = self[1]
-
-        if end1 == 'Fixed':
-            if end2 == 'Fixed':
-                return str(files("osdag_core.data.ResourceFiles.images").joinpath("RRRRstrut.png"))
-            elif end2 == 'Free':
-                return str(files("osdag_core.data.ResourceFiles.images").joinpath("RRRRstrut.png"))
-            elif end2 == 'Hinged':
-                return str(files("osdag_core.data.ResourceFiles.images").joinpath("RFRFstrut.png"))
-            elif end2 == 'Roller':
-                return str(files("osdag_core.data.ResourceFiles.images").joinpath("RRRRstrut.png"))
-        elif end1 == 'Free':
-            return str(files("osdag_core.data.ResourceFiles.images").joinpath("RRRRstrut.png"))
-        elif end1 == 'Hinged':
-            if end2 == 'Fixed':
-                return str(files("osdag_core.data.ResourceFiles.images").joinpath("RRRFstrut.png"))
-            elif end2 == 'Hinged':
-                return str(files("osdag_core.data.ResourceFiles.images").joinpath("RFRFstrut.png"))
-            elif end2 == 'Roller':
-                return str(files("osdag_core.data.ResourceFiles.images").joinpath("RRRRstrut.png"))
-        elif end1 == 'Roller':
-            if end2 == 'Fixed':
-                return str(files("osdag_core.data.ResourceFiles.images").joinpath("RRRRstrut.png"))
-            elif end2 == 'Hinged':
-                return str(files("osdag_core.data.ResourceFiles.images").joinpath("RRRRstrut.png"))
-
-    def fn_conn_image(self):
-
-        "Function to populate section images based on the type of section "
-        img = self[0]
-        if img == VALUES_SEC_PROFILE_Compression_Strut[0]:
-            return VALUES_IMG_STRUT[0]
-        elif img ==VALUES_SEC_PROFILE_Compression_Strut[1]:
-            return VALUES_IMG_STRUT[2]
-        elif img == VALUES_SEC_PROFILE_Compression_Strut[2]:
-            return VALUES_IMG_STRUT[1]
-        elif img == VALUES_SEC_PROFILE_Compression_Strut[3]:
-            print(' fn_conn_image error')
-            return VALUES_IMG_TENSIONBOLTED[3]
+    def fn_end2_image(self, values=None):
+        # values is passed as arg_list from the UI when end conditions change
+        if values is not None:
+            end1 = values[0]
+            end2 = values[1]
         else:
-            return VALUES_IMG_TENSIONBOLTED[4]
+            end1 = self[0]
+            end2 = self[1]
+
+        # If either end is Hinged, show compression_hinged.png
+        if end1 == 'Hinged' or end2 == 'Hinged':
+            return str(files("osdag_core.data.ResourceFiles.images").joinpath("compression_hinged.png"))
+        # If both ends are Fixed, show compression_fixed.png
+        else:
+            return str(files("osdag_core.data.ResourceFiles.images").joinpath("compression_fixed.png"))
+
+    def fn_conn_image(self, args):
+        "Function to populate section images based on the type of section "
+        img = args[0]
+        if img == VALUES_SEC_PROFILE_Compression_Strut[0]:  # Angles
+            return VALUES_IMG_STRUT[0]
+        elif img == VALUES_SEC_PROFILE_Compression_Strut[1]:  # Back to Back Angles - Same side of gusset
+            return VALUES_IMG_STRUT[2]
+        elif img == VALUES_SEC_PROFILE_Compression_Strut[2]:  # Back to Back Angles - Opposite side of gusset
+            return VALUES_IMG_STRUT[3]
+        else:
+            return VALUES_IMG_STRUT[0]
 
 
     def fn_profile_section(self, args=None):
@@ -596,7 +577,52 @@ class Compression(Member):
         t3 = ([KEY_END1, KEY_END2], KEY_IMAGE_two, TYPE_IMAGE, self.fn_end2_image)
         lst.append(t3)
 
+        # Toggle visibility for intermittent connection fields based on section profile
+        t5 = ([KEY_SEC_PROFILE], KEY_OUT_INTERCONNECTION, TYPE_OUT_DOCK, self.out_intermittent)
+        lst.append(t5)
+
+        t5 = ([KEY_SEC_PROFILE], KEY_OUT_INTERCONNECTION, TYPE_OUT_LABEL, self.out_intermittent)
+        lst.append(t5)
+
+        t5 = ([KEY_SEC_PROFILE], KEY_OUT_INTERSPACING, TYPE_OUT_DOCK, self.out_intermittent)
+        lst.append(t5)
+
+        t5 = ([KEY_SEC_PROFILE], KEY_OUT_INTERSPACING, TYPE_OUT_LABEL, self.out_intermittent)
+        lst.append(t5)
+
+        t5 = ([KEY_SEC_PROFILE], KEY_OUT_INTER_PLATE_HEIGHT, TYPE_OUT_DOCK, self.out_intermittent)
+        lst.append(t5)
+
+        t5 = ([KEY_SEC_PROFILE], KEY_OUT_INTER_PLATE_HEIGHT, TYPE_OUT_LABEL, self.out_intermittent)
+        lst.append(t5)
+
+        t5 = ([KEY_SEC_PROFILE], KEY_OUT_INTER_PLATE_LENGTH, TYPE_OUT_DOCK, self.out_intermittent)
+        lst.append(t5)
+
+        t5 = ([KEY_SEC_PROFILE], KEY_OUT_INTER_PLATE_LENGTH, TYPE_OUT_LABEL, self.out_intermittent)
+        lst.append(t5)
+
+        t5 = ([KEY_SEC_PROFILE], KEY_OUT_INTER_WELD_SIZE, TYPE_OUT_DOCK, self.out_intermittent)
+        lst.append(t5)
+
+        t5 = ([KEY_SEC_PROFILE], KEY_OUT_INTER_WELD_SIZE, TYPE_OUT_LABEL, self.out_intermittent)
+        lst.append(t5)
+
         return lst
+
+    def out_intermittent(self, args):
+        """
+        Function to toggle intermittent connection fields visibility based on section profile.
+        Returns True for single Angles and single Channels (hide intermittent fields).
+        Returns False for Back to Back Angles (show intermittent fields).
+        """
+        sec_type = args[0]
+        # Hide intermittent fields for single angle profiles (Profile_name_1)
+        # Show intermittent fields for back-to-back configurations (Profile_name_2, Profile_name_3)
+        if sec_type == Profile_name_1:
+            return True  # Hide for single angles
+        else:
+            return False  # Show for Back to Back Angles
 
     def output_values(self,flag):
         #flag for design status
@@ -877,6 +903,22 @@ class Compression(Member):
         #        int(round(self.inter_plate_length, 0)) if flag else '', False)
         # out_list.append(t21)
 
+        # Populate Hover Dict (Compression Member)
+        self.hover_dict["Weld"] = (
+            f"<b>Weld</b><br>"
+            f"Size: {self.weld.size if (flag and hasattr(self.weld, 'size')) else ''} mm<br>"
+            f"Strength: {round(self.weld.strength, 2) if (flag and hasattr(self.weld, 'strength')) else ''} N/mm²<br>"
+            f"Stress: {round(self.weld.stress, 2) if (flag and hasattr(self.weld, 'stress')) else ''} N/mm<br>"
+            f"Eff. Length: {int(round(self.weld.length, 0)) if (flag and hasattr(self.weld, 'length')) else ''} mm"
+        )
+
+        self.hover_dict["Plate"] = (
+            f"Plate: {float(self.plate.length) if (flag and hasattr(self.plate, 'length')) else ''} mm x "
+            f"{float(self.plate.height) if (flag and hasattr(self.plate, 'height')) else ''} mm x "
+            f"{self.plate.thickness_provided if (flag and hasattr(self.plate, 'thickness_provided')) else ''} mm"
+        )
+
+        self.hover_dict["Member"] = f"Member: {self.result_designation if (flag and hasattr(self, 'result_designation')) else ''}"
 
         return out_list
     def func_for_validation(self, design_dictionary):
@@ -921,7 +963,7 @@ class Compression(Member):
                             all_errors.append(error)
                         else:
                             flag2 = True
-            elif option[2] == TYPE_COMBOBOX and option[0] not in [KEY_SEC_PROFILE, KEY_END1, KEY_END2, KEY_LOCATION, KEY_TYP]:
+            elif option[2] == TYPE_COMBOBOX and option[0] not in [KEY_SEC_PROFILE, KEY_END1, KEY_END2, KEY_LOCATION, KEY_TYP, KEY_MATERIAL]:
                 val = option[3]
                 if design_dictionary[option[0]] == val[0]:
                     # print(f'option[0] = {option[0]}')
@@ -965,14 +1007,13 @@ class Compression(Member):
 
         return components
 
-    def fn_conn_type(self):
-
+    def fn_conn_type(self, args):
         "Function to populate section size based on the type of section "
-        conn = self[0]
+        conn = args[0]
         if conn in VALUES_SEC_PROFILE_Compression_Strut:
             return VALUES_LOCATION_1
         else:
-            print(f" chevk fn_conn_type ")
+            print(f" check fn_conn_type ")
 
     # Setting inputs from the input dock GUI
 
@@ -2082,17 +2123,7 @@ class Compression(Member):
                                            fy=self.plate.fy)
                 self.net_area = self.section_property.depth * self.plate.thickness_provided
 
-            elif design_dictionary[KEY_SEC_PROFILE] == "Star Angles" and design_dictionary[KEY_LOCATION] == 'Long Leg':
-                self.plate.tension_yielding(length=2*self.section_property.max_leg, thickness=self.plate.thickness_provided,
-                                           fy=self.plate.fy)
-                self.net_area = 2*self.section_property.max_leg * self.plate.thickness_provided
-
-            elif design_dictionary[KEY_SEC_PROFILE] == "Star Angles" and design_dictionary[KEY_LOCATION] == 'Short Leg':
-                self.plate.tension_yielding(length=2*self.section_property.min_leg, thickness=self.plate.thickness_provided,
-                                           fy=self.plate.fy)
-                self.net_area = 2*self.section_property.min_leg * self.plate.thickness_provided
-
-            else:
+            elif design_dictionary[KEY_SEC_PROFILE] in [Profile_name_1, Profile_name_2, Profile_name_3]:
                 if design_dictionary[KEY_LOCATION] == 'Long Leg':
                     self.plate.tension_yielding(length=self.section_property.max_leg,
                                                thickness=self.plate.thickness_provided, fy=self.plate.fy)
@@ -2109,9 +2140,10 @@ class Compression(Member):
             if tension_capacity > self.res_force:
                 break
 
-        if design_dictionary[KEY_SEC_PROFILE] in ["Channels", 'Back to Back Channels', "Star Angles"]:
+        if design_dictionary[KEY_SEC_PROFILE] in ["Channels", 'Back to Back Channels']:
             self.max_tension_yield = 400*self.plate.fy*self.last_thk/1.1
         else:
+            # For Angles, Back to Back Angles - Same side of gusset, and Back to Back Angles - Opposite side of gusset
             self.max_tension_yield = 200*self.plate.fy*self.last_thk/1.1
 
         if tension_capacity >= self.res_force:
@@ -2210,7 +2242,7 @@ class Compression(Member):
             self.flange_weld = round_up(((self.weld.effective - self.web_weld) / 4), 1, 50)
             self.weld.length = (self.web_weld + 4 * self.flange_weld)
 
-        elif design_dictionary[KEY_SEC_PROFILE] in ["Star Angles", "Back to Back Angles"] and design_dictionary[
+        elif design_dictionary[KEY_SEC_PROFILE] in [Profile_name_2, Profile_name_3] and design_dictionary[
             KEY_LOCATION] == "Long Leg":
             if web == None:
                 self.web_weld = 2 * (self.section_property.max_leg - 2 * self.weld.size)
@@ -2221,7 +2253,7 @@ class Compression(Member):
             self.flange_weld = round_up((length_weld), 1, 50)
             self.weld.length = (self.web_weld + 4 * self.flange_weld)
 
-        elif design_dictionary[KEY_SEC_PROFILE] in ["Star Angles", "Back to Back Angles"] and design_dictionary[
+        elif design_dictionary[KEY_SEC_PROFILE] in [Profile_name_2, Profile_name_3] and design_dictionary[
             KEY_LOCATION] == "Short Leg":
             if web == None:
                 self.web_weld = 2 * (self.section_property.min_leg - 2 * self.weld.size)
@@ -2232,7 +2264,7 @@ class Compression(Member):
             self.flange_weld = round_up((length_weld), 1, 50)
             self.weld.length = (self.web_weld + 4 * self.flange_weld)
 
-        elif design_dictionary[KEY_SEC_PROFILE] == "Angles" and design_dictionary[KEY_LOCATION] == "Long Leg":
+        elif design_dictionary[KEY_SEC_PROFILE] == Profile_name_1 and design_dictionary[KEY_LOCATION] == "Long Leg":
             if web == None:
                 self.web_weld = (self.section_property.max_leg - 2 * self.weld.size)
             else:
@@ -2253,15 +2285,12 @@ class Compression(Member):
             self.weld.length = (self.web_weld + 2 * self.flange_weld)
 
         self.plate.length = self.flange_weld + max((4 * self.weld.size), 30)
-        if design_dictionary[KEY_SEC_PROFILE] == "Star Angles" and design_dictionary[KEY_LOCATION] == "Long Leg":
-            self.plate.height = 2 * self.section_property.max_leg + max((4 * self.weld.size), 30)
-        elif design_dictionary[KEY_SEC_PROFILE] == "Star Angles" and design_dictionary[KEY_LOCATION] == "Short Leg":
-            self.plate.height = 2 * self.section_property.min_leg + max((4 * self.weld.size), 30)
-        elif design_dictionary[KEY_SEC_PROFILE] in ["Back to Back Angles", "Angles"] and design_dictionary[KEY_LOCATION] == "Short Leg":
+        if design_dictionary[KEY_SEC_PROFILE] in [Profile_name_1, Profile_name_2, Profile_name_3] and design_dictionary[KEY_LOCATION] == "Short Leg":
             self.plate.height = self.section_property.min_leg + max((4 * self.weld.size), 30)
-        elif design_dictionary[KEY_SEC_PROFILE] in ["Back to Back Angles", "Angles"] and design_dictionary[KEY_LOCATION] == "Long Leg":
+        elif design_dictionary[KEY_SEC_PROFILE] in [Profile_name_1, Profile_name_2, Profile_name_3] and design_dictionary[KEY_LOCATION] == "Long Leg":
             self.plate.height = self.section_property.max_leg + max((4 * self.weld.size), 30)
         else:
+            # For Channels and Back to Back Channels
             self.plate.height = self.section_property.depth + max((4 * self.weld.size), 30)
 
     def get_plate_thickness(self, design_dictionary):
@@ -2528,8 +2557,8 @@ class Compression(Member):
         
         else:
             if self.optimization_parameter == 'Utilization Ratio':
-                print(f" self.optimum_section_ur_results {self.optimum_section_ur_results}")
-                self.common_result(list_result=self.optimum_section_ur_results, result_type=self.result_UR)
+                # common_result already called above for UR optimization, skip duplicate call
+                pass
             else:
                 self.result_UR = self.optimum_section_cost_results[self.result_cost]['UR']
 
@@ -2643,37 +2672,27 @@ class Compression(Member):
             section_type = 'I Section' """
         
         if self.section_property.max_leg == self.section_property.min_leg:
-            if self.sec_profile == "Back to Back Angles":
+            if self.sec_profile in [Profile_name_2, Profile_name_3]:
                 if self.loc == "Long Leg":
                     image = "bblequaldp"
                 else:
                     image = "bbsequaldp"
-            elif self.sec_profile == "Star Angles":
-                if self.loc == "Long Leg":
-                    image = "salequaldp"
-                else:
-                    image = "sasequaldp"
             else:
                 image = "equaldp"
 
         else:
-            if self.sec_profile == "Back to Back Angles":
+            if self.sec_profile in [Profile_name_2, Profile_name_3]:
                 if self.loc == "Long Leg":
                     image = "bblunequaldp"
                 else:
                     image = "bbsunequaldp"
-            elif self.sec_profile == "Star Angles":
-                if self.loc == "Long Leg":
-                    image = "salunequaldp"
-                else:
-                    image = "sasunequaldp"
             else:
                 image = "unequaldp"
         
         if (self.design_status and self.failed_design_dict is None) or (not self.design_status and len(self.failed_design_dict)>0):
             if self.sec_profile == Profile_name_1 or self.sec_profile == Profile_name_2 or self.sec_profile == Profile_name_3:  # Angles and Back to Back Angles
                 self.section_property = Angle(designation = self.result_designation, material_grade = self.material)
-            if self.sec_profile == "Angles" or self.sec_profile == VALUES_SEC_PROFILE_2[0]:
+            if self.sec_profile == Profile_name_1:
                 self.report_column = {KEY_DISP_SEC_PROFILE: image,
                                         KEY_DISP_SECSIZE: (self.section_property.designation, self.sec_profile),
                                         KEY_DISP_MATERIAL: self.section_property.material,

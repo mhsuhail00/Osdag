@@ -2579,10 +2579,15 @@ class CommonDesignLogic(object):
 
         elif self.mainmodule == 'Struts in Trusses':
             self.col = self.module_object  
+            # Hover dict for Struts in Trusses
+            hover_dict = self.module_object.hover_dict
+            self.cad_widget.model_hover_labels = hover_dict
+            
             self.ColObj = self.createStrutsInTrusses()
 
             if self.component == "Model":
-                osdag_display_shape(self.display, self.ColObj, update=True)
+                label_member = ["Member", hover_dict.get("Member", "")]
+                osdag_display_shape(self.display, self.ColObj, update=True, label=label_member, canvas=self.cad_widget)
 
         else:
             if self.connection == KEY_DISP_TENSION_BOLTED:
@@ -2809,6 +2814,11 @@ class CommonDesignLogic(object):
                 self.cad_widget.display_view_cube()
         elif self.mainmodule == 'Struts in Trusses':
             if flag is True:
+                self.col = self.module_object
+                # Hover dict for Struts in Trusses
+                hover_dict = self.module_object.hover_dict
+                self.cad_widget.model_hover_labels = hover_dict
+                
                 self.ColObj = self.createStrutsInTrusses()
 
                 self.display_3DModel("Model", "gradient_bg")
