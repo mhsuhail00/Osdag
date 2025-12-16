@@ -296,10 +296,10 @@ class BeamBeamEndPlateSplice(MomentConnection):
         return lst
 
 
-    def fn_conn_image(self):
+    def fn_conn_image(self, data):
         """ Display representative images of end plate type """
 
-        ep_type = self[0]
+        ep_type = data[0]
         if ep_type == VALUES_ENDPLATE_TYPE[0]:
             return str(files("osdag_core.data.ResourceFiles.images").joinpath("flush_ep.png"))
         elif ep_type == VALUES_ENDPLATE_TYPE[1]:
