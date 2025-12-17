@@ -1553,7 +1553,7 @@ class CustomWindow(QWidget):
                 # print(f"[INFO] main attributes: {dir(main)}")
                 # print("[INFO] main.mainmodule",main.mainmodule)
 
-                self.commLogicObj = CommonDesignLogic(self.display, self.cad_widget, self.folder, main.module, main.mainmodule)
+                self.commLogicObj = CommonDesignLogic(self.display, self.cad_widget, self.folder, main, main.mainmodule)
                 # print(f"This is MAIN.MODULE {main.module}")
                 # print("[INFO] main.mainmodule", main.mainmodule)
                 # print("[INFO] common start")
@@ -1565,7 +1565,15 @@ class CustomWindow(QWidget):
                 # print("Hover Dictionary: ", main.hover_dict)
 
                 print("[INFO] Calling 3D Model from CAD")
-                self.commLogicObj.call_3DModel(status, main)
+                print("[INFO] Calling 3D Model from CAD")
+                if main.module == KEY_DISP_LAPJOINTWELDED:
+                    # Direct call for Lap Joint Welded to bypass common logic issues
+                    background = "gradient_light"
+                    if not self.theme.is_light():
+                        background = "gradient_dark"
+                    main.call_3DModel(self, background)
+                else:
+                    self.commLogicObj.call_3DModel(status, main)
                 # Store the design instance for later use in report generation
                 if hasattr(self.commLogicObj, 'design_obj'):
                     # Store reference to the design instance
@@ -1587,7 +1595,8 @@ class CustomWindow(QWidget):
                 # Show cad component checkboxes
                 self.cad_comp_widget.show()
                 for chkbox in main.get_3d_components():
-                    self.cad_comp_widget.findChild(QCheckBox, chkbox[0]).setChecked(False)
+                    is_checked = (chkbox[0] == "Model")
+                    self.cad_comp_widget.findChild(QCheckBox, chkbox[0]).setChecked(is_checked)
 
                 for action in self.menu_cad_components:
                     action.setEnabled(True)
@@ -2040,6 +2049,7 @@ class CadComponentCheckbox(QWidget):
         self.checkbox_layout.setSpacing(0)
         self.checkbox_layout.addStretch()
 
+        self.checkboxes = []
         for option in data:
             label = option[0]
             check_box = QCheckBox(label)
@@ -2047,13 +2057,39 @@ class CadComponentCheckbox(QWidget):
             function_name = option[1]
             self.component_connect(backend, check_box, function_name)
             self.checkbox_layout.addWidget(check_box)
+            self.checkboxes.append(check_box)
+            
+            # Default check for "Model"
+            if label == "Model":
+                check_box.setChecked(True)
         self.checkbox_layout.addStretch()
 
     def component_connect(self, backend, check_box, f):
         background = "gradient_light"
         if not self.parent.theme.is_light():
             background = "gradient_dark"
-        check_box.clicked.connect(lambda: f(self.parent, background))
+            
+        def on_click(state):
+            if state:
+                # Uncheck others
+                for cb in self.checkboxes:
+                    if cb != check_box:
+                        cb.blockSignals(True)
+                        cb.setChecked(False)
+                        cb.blockSignals(False)
+                # Call display function
+                f(self.parent, background)
+            else:
+                # If trying to uncheck the active one, treat it as re-click or ignore?
+                # Usually radio behavior prevents unchecking.
+                # Re-check it to enforce selection? Or allow empty view?
+                # User says: "when a check box is checked, other checkboxes should be unchecked"
+                # Let's enforce single selection.
+                check_box.blockSignals(True)
+                check_box.setChecked(True)
+                check_box.blockSignals(False)
+
+        check_box.clicked.connect(on_click)
 
 # Standalone testing
 # python -m osdag_gui.ui.windows.template_page
