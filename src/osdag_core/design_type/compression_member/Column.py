@@ -541,6 +541,20 @@ class ColumnDesign(Member):
         t1 = (KEY_DESIGN_STRENGTH_COMPRESSION, KEY_DISP_DESIGN_STRENGTH_COMPRESSION, TYPE_TEXTBOX,
               round(self.result_capacity * 1e-3, 2) if flag else '', True)
         out_list.append(t1)
+        
+
+        # Hover information
+
+        self.hover_dict = getattr(self, "hover_dict", {})
+
+        self.hover_dict["Column"] = (
+           f"<b>Column</b><br>"
+           f"Section: {self.result_designation if flag else ''}<br>"
+           f"Effective Length ZZ: {round(self.result_eff_len_zz * 1e-3, 2) if flag else ''} m<br>"
+           f"Effective Length YY: {round(self.result_eff_len_yy * 1e-3, 2) if flag else ''} m<br>"
+           f"Design Capacity: {round(self.result_capacity * 1e-3, 2) if flag else ''} kN<br>"
+           f"Utilization Ratio: {round(self.result_UR, 3) if flag else ''}"
+        )
 
         return out_list
 
