@@ -38,7 +38,7 @@ class SidebarIconButton(QPushButton):
             self.setIcon(self.default_icon)
         else:
             self.setIcon(self.dark_icon)
-        self.setCursor(QCursor(Qt.PointingHandCursor))
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.setFocusPolicy(Qt.NoFocus)
 
         self.set_default_style()
@@ -121,6 +121,9 @@ class SidebarWidget(QWidget):
     openNewTab = Signal(str)
     def __init__(self, parent):
         super().__init__(parent)
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
+        
         self.parent = parent
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)

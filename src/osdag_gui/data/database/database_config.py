@@ -218,13 +218,13 @@ MODULE_MAP = {
     KEY_DISP_CLEATANGLE: ['Cleat Angle', 'Shear Connection', 'open_cleat_angle_shear_connection'],
     KEY_DISP_SEATED_ANGLE: ['Seated Angle', 'Shear Connection', 'open_seated_angle_shear_connection'],
 
-    KEY_DISP_BEAMCOVERPLATE: ['Beam to Beam Cover Plate Bolted', 'Moment Connection', 'None'],
-    KEY_DISP_BEAMCOVERPLATEWELD: ['Beam to Beam Cover Plate Welded', 'Moment Connection', 'None'],
-    KEY_DISP_BB_EP_SPLICE: ['Beam-to-Beam End Plate', 'Moment Connection', 'None'],
+    KEY_DISP_BEAMCOVERPLATE: ['Beam to Beam Cover Plate Bolted', 'Moment Connection', 'open_beam_cover_plate_moment_connection'],
+    KEY_DISP_BEAMCOVERPLATEWELD: ['Beam to Beam Cover Plate Welded', 'Moment Connection', 'open_beam_cover_plate_weld_moment_connection'],
+    KEY_DISP_BB_EP_SPLICE: ['Beam-to-Beam End Plate', 'Moment Connection', 'open_beam_beam_end_plate_splice_connection'],
 
-    KEY_DISP_COLUMNCOVERPLATE: ['Column to Column Cover Plate Bolted', 'Moment Connection', 'None'],
-    KEY_DISP_COLUMNCOVERPLATEWELD: ['Column to Column Cover Plate Welded', 'Moment Connection', 'None'],
-    KEY_DISP_COLUMNENDPLATE: ['Column-to-Column End Plate', 'Moment Connection', 'None'],
+    KEY_DISP_COLUMNCOVERPLATE: ['Column to Column Cover Plate Bolted', 'Moment Connection', 'open_column_cover_plate_connection'],
+    KEY_DISP_COLUMNCOVERPLATEWELD: ['Column to Column Cover Plate Welded', 'Moment Connection', 'open_column_cover_plate_weld_connection'],
+    KEY_DISP_COLUMNENDPLATE: ['Column-to-Column End Plate', 'Moment Connection', 'open_column_end_plate_connection'],
 
     KEY_DISP_BCENDPLATE: ['Beam-to-Column End Plate', 'Moment Connection', 'open_end_plate_btc_page'],
 
@@ -244,12 +244,13 @@ MODULE_MAP = {
     #---------Compression-Member-start------------------------------------------------------
     KEY_DISP_COMPRESSION_Strut: ['Struts in Trusses', 'Compression Member', 'open_struts_in_trusses_compression_member'],
     KEY_DISP_COMPRESSION_COLUMN: ['Axially Loaded Columns', 'Compression Member', 'None'],
+    KEY_DISP_COMPRESSION_COLUMN: ['Columns with Support', 'Compression Member', 'open_column_design'],
     #---------Compression-Member-end------------------------------------------------------
 
     #---------Flexural-Member-start------------------------------------------------------
     KEY_DISP_FLEXURE: ['Simply Supported Beam', 'Flexural Members', 'None'],
     KEY_DISP_FLEXURE2: ['Cantilever Beam', 'Flexural Members', 'None'],
-    KEY_DISP_FLEXURE4: ['Purlins', 'Flexural Members', 'None'],
+    KEY_DISP_FLEXURE4: ['Purlins', 'Flexural Members', 'open_flexure_purlin'],
     KEY_DISP_PLATE_GIRDER_WELDED: ['Plate Girder', 'Flexural Members', 'open_plate_girder']
     #---------Flexural-Member-end------------------------------------------------------
 
@@ -295,7 +296,7 @@ def create_user_database():
 
     conn.commit()
     conn.close()
-    print(f"[INFO] Database initialized at: {sqlitepath}")
+    # print(f"[INFO] Database initialized at: {sqlitepath}")
 
 def _format_datetime(dt_str: str) -> str:
     """
@@ -367,7 +368,7 @@ def fetch_all_recent_modules() -> list[dict]:
             }
             records.append(r)
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
+        print(f"[ERROR] Database error: {e}")
     finally:
         if conn:
             conn.close()
@@ -390,7 +391,7 @@ def delete_project_record(project_id: int) -> bool:
         conn.commit()
         return cursor.rowcount > 0
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
+        print(f"[ERROR] Database error: {e}")
         return False
     finally:
         if conn:
@@ -428,7 +429,7 @@ def update_project_path(project_id: int, new_path: str, new_name: str) -> int | 
         conn.commit()
         return project_id
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
+        print(f"[ERROR] Database error: {e}")
         return None
     finally:
         if conn:
@@ -462,7 +463,7 @@ def get_project_by_id(project_id: int) -> dict | None:
         else:
             return None
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
+        print(f"[ERROR] Database error: {e}")
         return None
     finally:
         if conn:
@@ -511,7 +512,7 @@ def insert_recent_project(data: dict) -> int | None:
         conn.commit()
         return cursor.lastrowid
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
+        print(f"[ERROR] Database error: {e}")
         return None
     finally:
         if conn:
@@ -544,7 +545,7 @@ def insert_recent_module(module_key: str) -> int | None:
         conn.commit()
         return cursor.lastrowid
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
+        print(f"[ERROR] Database error: {e}")
         return None
     finally:
         if conn:
@@ -607,7 +608,7 @@ def refactor_database():
 
     conn.commit()
     conn.close()
-    print("[INFO] Database cleanup complete.") 
+    # print("[INFO] Database cleanup complete.") 
 
 def main():
     print("=== Testing User Database Functions ===")

@@ -53,6 +53,8 @@ import yaml
 class OutputDock(QWidget):
     def __init__(self, backend:object, parent):
         super().__init__(parent)
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.parent = parent
         # Already an Object created in template_page.py
         self.backend = backend
@@ -64,9 +66,6 @@ class OutputDock(QWidget):
 
         self.setObjectName("output_dock")
         self.dock_width = 360
-        self.panel_visible = False # Initially hidden
-        self.setMinimumWidth(0)
-        self.setMaximumWidth(16777215)
 
         # Ensure OutputDock expands in splitter
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -93,6 +92,7 @@ class OutputDock(QWidget):
 
         self.toggle_btn = QPushButton("❯")  # Show state initially
         self.toggle_btn.setFixedSize(6, 60)
+        self.toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.toggle_btn.setObjectName("toggle_strip_button")
         self.toggle_btn.setToolTip("Show panel")
 
@@ -101,14 +101,6 @@ class OutputDock(QWidget):
         toggle_layout.addWidget(self.toggle_btn)
         toggle_layout.addStretch()
         output_layout.addWidget(self.toggle_strip)
-
-        # # Hide the dock initially
-        # self.setMinimumWidth(0)
-        # self.setMaximumWidth(0)
-
-        # Show the dock initially for testing
-        self.setMinimumWidth(self.dock_width)
-        self.setMaximumWidth(self.dock_width)
 
         # --- Right content (everything except toggle strip) ---
         right_content = QWidget()
@@ -273,14 +265,13 @@ class OutputDock(QWidget):
         h_scroll_area.setWidget(right_content)
 
         output_layout.addWidget(h_scroll_area)
-
     # ----------------------------------Save-Design-Report-Start------------------------------------------------------
     
     def open_summary_popup(self, main):
         """Open the unified report dialog instead of separate popups"""
-        print("Testing Unified Report Dialog")
+        # print("Testing Unified Report Dialog")
         print(self.backend.logger.logs)
-        print('main.module_name', main.module_name())
+        # print('main.module_name', main.module_name())
         
         if not main.design_button_status:
             CustomMessageBox(
@@ -293,9 +284,9 @@ class OutputDock(QWidget):
         # Generate 3D images only if design exists
         if main.design_status:
             try:
-                print("Start!")
+                # print("[INFO] Start!")
                 off_display, _, _, _ = init_display_off_screen(backend_str=CAD_BACKEND)
-                print('off_display', off_display)
+                # print(' [INFO] off_display', off_display)
                 
                 # Check if commLogicObj exists and is properly initialized
                 if hasattr(self.parent, 'commLogicObj') and self.parent.commLogicObj is not None:
@@ -328,16 +319,16 @@ class OutputDock(QWidget):
                     if original_component is not None:
                         self.parent.commLogicObj.component = original_component
                         
-                    print("3D images generated successfully")
+                    # print("[INFO] 3D images generated successfully")
                 else:
-                    print("commLogicObj not available - skipping 3D image generation")
+                    # print("[INFO] commLogicObj not available - skipping 3D image generation")
                     # Create default/placeholder images directory
                     image_folder_path = "./ResourceFiles/images"
                     if not os.path.exists(image_folder_path):
                         os.makedirs(image_folder_path)
                     
             except Exception as e:
-                print(f"Error generating 3D images: {str(e)}")
+                print(f"[ERROR] Error generating 3D images: {str(e)}")
                 # Ensure images directory exists even if image generation fails
                 image_folder_path = "./ResourceFiles/images"
                 if not os.path.exists(image_folder_path):
@@ -400,16 +391,16 @@ class OutputDock(QWidget):
                     if original_component is not None:
                         self.parent.commLogicObj.component = original_component
                         
-                    print("3D images generated successfully")
+                    print("[INFO] 3D images generated successfully")
                 else:
-                    print("commLogicObj not available - skipping 3D image generation")
+                    print("[INFO] commLogicObj not available - skipping 3D image generation")
                     # Create default/placeholder images directory
                     image_folder_path = "./ResourceFiles/images"
                     if not os.path.exists(image_folder_path):
                         os.makedirs(image_folder_path)
                     
             except Exception as e:
-                print(f"Error generating 3D images: {str(e)}")
+                print(f"[ERROR] Error generating 3D images: {str(e)}")
                 # Ensure images directory exists even if image generation fails
                 image_folder_path = "./ResourceFiles/images"
                 if not os.path.exists(image_folder_path):
@@ -482,7 +473,7 @@ class OutputDock(QWidget):
         try:
             shutil.copy(tex_path, os.path.join(target_dir, os.path.basename(tex_path)))
         except Exception as e:
-            print(f"Error copying .tex file to {target_dir}: {e}")
+            print(f"[ERROR] Error copying .tex file to {target_dir}: {e}")
 
         # Copy all PNG files
         for img_path in imgs:
@@ -491,9 +482,11 @@ class OutputDock(QWidget):
                 try:
                     shutil.copy(img_path, os.path.join(target_dir, os.path.basename(img_path)))
                 except Exception as e:
-                    print(f"Error copying PNG file {img_path} to {target_dir}: {e}")
+                    # print(f"[ERROR] Error copying PNG file {img_path} to {target_dir}: {e}")
+                    pass
             else:
-                print(f"Skipping invalid PNG path: {img_path}")
+                # print(f"[WARNING] Skipping invalid PNG path: {img_path}")
+                pass
 
         return id    
     
@@ -538,8 +531,10 @@ class OutputDock(QWidget):
                 dialogType=MessageBoxType.Information
             ).exec()
         else:
-            fileName, _ = QFileDialog.getSaveFileName(self,
-                                                        "Save Output", os.path.join(self.parent.folder, "untitled.csv"),
+            default_dir = os.path.join(get_documents_folder(), "Inputs.csv")
+            fileName, _ = QFileDialog.getSaveFileName(  self,
+                                                        "Save Output",
+                                                        default_dir,
                                                         "Input Files(*.csv)")
             if fileName:
                 bigdata.to_csv(fileName, index=False, header=None)
@@ -552,7 +547,7 @@ class OutputDock(QWidget):
     # ----------------------------------Save-Outputs-END------------------------------------------------------
 
     def run_spacing_script(self,cols,rows,generator_class=BoltPatternGenerator , main=None):
-        print("Creating spacing window...")
+        print("[INFO] Creating spacing window...")
         self.spacing_window = generator_class(self.backend,cols=cols,rows=rows,main=main)
         self.spacing_window.setWindowTitle("Spacing Viewer")
         self.spacing_window.raise_()
@@ -560,10 +555,10 @@ class OutputDock(QWidget):
         self.spacing_window.show()
     
     def run_capacity_details(self,cols,rows,generator_class=FinPlateCapacityDetails , main=None):
-        print("Creating capacity details window...")
-        print("++++++++++++++++++++++++++++++DEBUG++++++++++++++++++++++++++++++")
-        print(generator_class)
-        print("++++++++++++++++++++++++++++++DEBUG++++++++++++++++++++++++++++++")
+        print("[INFO] Creating capacity details window...")
+        # print("++++++++++++++++++++++++++++++DEBUG++++++++++++++++++++++++++++++")
+        # print(generator_class)
+        # print("++++++++++++++++++++++++++++++DEBUG++++++++++++++++++++++++++++++")
         self.capacity_window = generator_class(self.backend,cols=cols,rows=rows,main=main)
         self.capacity_window.setWindowTitle("Capacity Details")
         self.capacity_window.raise_()
@@ -629,7 +624,7 @@ class OutputDock(QWidget):
                             self.run_spacing_script(None,val,SeatedAngleDetails,main)
                             return
                 elif op[0]==KEY_OUT_DISP_BP_DETAILING_SKETCH and op[1]==KEY_OUT_DISP_BP_DETAILING:
-                            print(f'rows: {self.backend.bolt_row} , cols : {self.backend.bolt_column} , {self.backend.bolt_row_web}')
+                            # print(f"[INFO] rows: {self.backend.bolt_row} , cols : {self.backend.bolt_column} , {self.backend.bolt_row_web}")
                             self.run_spacing_script(0,0,B2CEndPlateDetails,main)
                             return
                
@@ -716,9 +711,6 @@ class OutputDock(QWidget):
         # For now, we don't have a specific callback for the width animation
         pass
 
-    def is_panel_visible(self):
-        return self.panel_visible
-
     def set_results(self, result_dict):
         layout = self.layout()
         while layout.count():
@@ -732,8 +724,7 @@ class OutputDock(QWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        # Checking hasattr is only meant to prevent errors,
-        # while standalone testing of this widget
+        # Checking hasattr is only meant to prevent errors
         if self.parent:
             if self.width() == 0:
                 if hasattr(self.parent, 'update_docking_icons'):
@@ -787,7 +778,7 @@ class OutputDock(QWidget):
             self.output_title_fields[no_field_title][0].setVisible(False)
 
     def output_title_visiblity(self, visible_fields, key, titles, title_repeat):
-        print(f"key={key} \n titles={titles} ")
+        # print(f"[INFO] key={key} \n titles={titles} ")
         if visible_fields == 0:
             if key in titles:
                 self.output_title_fields[key + str(title_repeat)][0].setVisible(False)

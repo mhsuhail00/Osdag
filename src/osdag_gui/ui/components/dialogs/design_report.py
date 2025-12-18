@@ -23,7 +23,7 @@ import shutil
 import subprocess
 
 try:
-    from osdag_core.Common import PDFLATEX
+    from osdag_core.Common import PDFLATEX, get_documents_folder
 except ImportError:
     # using systems pdflatex
     PDFLATEX = 'pdflatex'
@@ -129,7 +129,7 @@ class DesignReportDialog(QDialog):
         self.temp_dir = tempfile.mkdtemp(prefix='osdag_report_')
         filename = os.path.join(self.temp_dir, "report.tex")
 
-        print(f"INFO: Temp dir initialized, {self.temp_dir}")
+        # print(f"INFO: Temp dir initialized, {self.temp_dir}")
 
         # Generate LaTeX file
         self.generate_latex_file(filename, input_summary)
@@ -219,13 +219,14 @@ class DesignReportDialog(QDialog):
             )
 
             if result.returncode != 0:
-                print(f"ERROR: Return Code {result.returncode}")
+                print(f"[ERROR]: Design Report Compilation Failed, Return Code {result.returncode}")
+                print(result.stdout)
             else:
-                print(f"INFO: Compilation Successful, Return Code {result.returncode}")
+                print(f"[INFO]: Design Report Compilation Successful.")
 
             if os.path.exists(pdf_file):
                 self.latest_pdf = pdf_file
-                print(f"INFO: PDF Generated.")
+                print(f"[INFO]: PDF Generated.")
                 return pdf_file 
             
 
@@ -275,9 +276,10 @@ class DesignReportDialog(QDialog):
         if not pdf_path:
             return
         
+        default_dir = os.path.join(get_documents_folder(), "Osdag_Custom_Report.pdf")
         filename, _ = QFileDialog.getSaveFileName(
             self, "Save Customized Report", 
-            "Osdag_Custom_Report.pdf", 
+            default_dir, 
             "PDF files (*.pdf)"
         )
         

@@ -48,6 +48,8 @@ class ThemedSvgWidget(QSvgWidget):
 class SearchBarWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.is_focused = False
         self.setupUI()
 
@@ -306,12 +308,16 @@ class ModuleItem(QFrame):
         self.module_data = module_data
         app = QApplication.instance()
         self.theme = app.theme_manager
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setupUI()
         self.selected = False
-    def mousePressEvent(self, event):
-        self.set_selected(True)
-        # Optionally notify parent to deselect others
+    
+    def enterEvent(self, event):
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        super().enterEvent(event)
+    
+    def leaveEvent(self, event):
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        super().leaveEvent(event)
 
     def set_selected(self, selected):
         self.selected = selected
@@ -374,6 +380,7 @@ class ModuleItem(QFrame):
     # Mouse Press Event
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
             self.openModule.emit(self.module_data.get(MODULE_KEY))
         return super().mousePressEvent(event)
 
@@ -499,6 +506,8 @@ class HomeWidget(QWidget):
     openModule = Signal(str)
     def __init__(self):
         super().__init__()
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.selected_item = None
         self.search_overlay = None
         
@@ -654,7 +663,7 @@ class HomeWidget(QWidget):
                             import subprocess
                             subprocess.run(['xdg-open', folder])
                     except Exception as e:
-                        print(f"Failed to open folder: {e}")
+                        print(f"[ERROR] Failed to open folder: {e}")
 
             except Exception as e:
                 CustomMessageBox(

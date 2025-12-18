@@ -15,7 +15,7 @@ class ClickableLabel(QLabel):
 
     def __init__(self, text="", parent=None):
         super().__init__(text, parent)
-        self.setCursor(Qt.PointingHandCursor)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self._id = text
 
     def mousePressEvent(self, event):
@@ -144,6 +144,8 @@ class SvgCardContainer(QWidget):
 
     def __init__(self, card_data):
         super().__init__()
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.layout = QGridLayout(self)
         self.layout.setSpacing(10)
         self.selected_card = None

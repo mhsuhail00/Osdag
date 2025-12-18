@@ -11,6 +11,8 @@ Contains SVGs, images, backgrounds, and theme files for the application.
         <file>vectors/Osdag_dark.svg</file>
         <file>vectors/FOSSEE_light.svg</file>
         <file>vectors/FOSSEE_dark.svg</file>
+        <file>vectors/INSDAG_light.svg</file>
+        <file>vectors/INSDAG_dark.svg</file>
         <file>vectors/IITB_logo_light.svg</file>
         <file>vectors/IITB_logo_dark.svg</file>
         <file>vectors/ConstructSteel_light.svg</file>
@@ -26,6 +28,11 @@ Contains SVGs, images, backgrounds, and theme files for the application.
         <file>vectors/contour_lines.svg</file>
         <file>vectors/description_label.svg</file>
         <file>vectors/version.svg</file>
+
+        <file>vectors/lock_close_light.svg</file>
+        <file>vectors/lock_close_dark.svg</file>
+        <file>vectors/lock_open_light.svg</file>
+        <file>vectors/lock_open_dark.svg</file>
 
         <file>vectors/recently_used_module_icon_light.svg</file>
         <file>vectors/recently_used_module_icon_dark.svg</file>
@@ -71,7 +78,8 @@ Contains SVGs, images, backgrounds, and theme files for the application.
         <file>vectors/cantilever_beam_flexural_mem.svg</file>
         <file>vectors/ss_beam_flexural_mem.svg</file>
         <file>vectors/simple_supported_plate_girder.svg</file>
-        
+        <file>vectors/purlin_flexure_member.svg</file>
+        <file>vectors/column_design_compression_mem.svg</file>        
 
 
         <file>backgrounds/splash_bg.jpg</file>

@@ -8,6 +8,8 @@ from PySide6.QtCore import Qt, QDateTime
 class LogDock(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.is_visible = True
         self.setObjectName("logs_dock")
         self.init_ui()
@@ -36,6 +38,11 @@ class LogDock(QWidget):
 
         self.setLayout(layout)
         self.show()  # Show init text
+    
+    def clear_logs(self):
+        self.log_display.clear()
+        # Add init log text matching
+        self.append_log(f"[{QDateTime.currentDateTime().toString('yyyy-MM-dd hh:mm:ss')}] Log initialized", "info")
 
     def append_log(self, message, log_level="info"):
         """Append a message to the log display with specified color."""
@@ -66,18 +73,16 @@ class LogDock(QWidget):
         if not parent:
             return
 
-        # Get the current tab's input and output dock states
-        current_tab_index = parent.tab_bar.currentIndex()
-        if current_tab_index < 0 or current_tab_index >= len(parent.tab_widget_content):
+        if parent.input_dock is None or parent.output_dock is None:
             return
-
-        input_active = parent.tab_widget_content[current_tab_index][3]
-        output_active = parent.tab_widget_content[current_tab_index][4]
+        
+        input_dock = parent.input_dock
+        output_dock = parent.output_dock
 
         # Calculate available width
         parent_width = parent.width()
-        input_dock_width = parent.tab_widget_content[current_tab_index][1].width() if input_active else 0
-        output_dock_width = parent.tab_widget_content[current_tab_index][2].width() if output_active else 0
+        input_dock_width = input_dock.width() if input_dock.isVisible() else 0
+        output_dock_width = output_dock.width() if output_dock.isVisible() else 0
         available_width = parent_width - input_dock_width - output_dock_width
 
         # Set log dock size

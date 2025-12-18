@@ -14,12 +14,12 @@ from osdag_gui.__config__ import VERSION
 import osdag_gui.resources.resources_rc
 
 class CustomButton(QPushButton):
-    def __init__(self, text, icon_path_default, icon_path_clicked, icon_dark, group=None, parent=None):
+    def __init__(self, text, icon_path_default, icon_path_clicked, icon_dark, under_dev=False, group=None, parent=None):
         super().__init__(text, parent)
         self.theme = QApplication.instance().theme_manager
         self.group = group
         self.is_clicked = False
-        self.setCursor(QCursor(Qt.PointingHandCursor))
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.setFocusPolicy(Qt.NoFocus)
 
         self.default_icon = QIcon(icon_path_default)
@@ -44,7 +44,7 @@ class CustomButton(QPushButton):
         self.set_active_style()
         self.setIcon(self.clicked_icon)
         self.is_clicked = True
-        print(self.text().strip(), "clicked")
+        # print(self.text().strip(), "clicked")
         super().mousePressEvent(event)
 
     def paintEvent(self, event):
@@ -84,6 +84,8 @@ class VerticalMenuBar(QWidget):
     nav_bar_trigger = Signal(object, object)
     def __init__(self, data: dict, icons: dict):
         super().__init__()
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.app = QApplication.instance()
         self.theme_manager = self.app.theme_manager
         # Set size policy to expanding so it grows/shrinks with its parent layout
@@ -93,7 +95,6 @@ class VerticalMenuBar(QWidget):
         self.main_layout.setContentsMargins(2, 5, 2, 0)
         self.main_layout.setSpacing(0)
         
-
         # Header section
         self.header = QFrame()
         self.header.setObjectName("navbar_header")
@@ -122,11 +123,19 @@ class VerticalMenuBar(QWidget):
         names = list(data.keys())
         for name in names:
             icon = icons.get(name)
-            btn = CustomButton("  " + name, icon[0], icon[1], icon[2], group=self.button_group)
+            # If list is empty, Grey It
+            if isinstance(data.get(name), list) and len(data.get(name))<=0:
+                btn = CustomButton("  " + name, icon[0], icon[1], icon[2], under_dev=True, group=self.button_group)
+                btn.setDisabled(True)
+                btn.setObjectName("navbar_button_under_dev")
+                btn.setToolTip("Under Development")
+                btn.setCursor(Qt.CursorShape.ForbiddenCursor)
+            else:
+                btn = CustomButton("  " + name, icon[0], icon[1], icon[2], group=self.button_group)
+                btn.setObjectName("navbar_button")
             btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding) # Make buttons expand vertically
             btn.clicked.connect(lambda _,label=name, data=data.get(name): self._on_nav_button_clicked(data, label))
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setObjectName("navbar_button")
             self.button_group.append(btn)
             self.main_layout.addWidget(btn)
 

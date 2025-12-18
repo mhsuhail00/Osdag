@@ -25,6 +25,8 @@ class Compression(Member):
     def __init__(self):
         # print(f"Here Compression")
         super(Compression, self).__init__()
+        self.design_status = False
+        self.hover_dict = {}
 
     ###############################################
     # Design Preference Functions Start
@@ -458,7 +460,7 @@ class Compression(Member):
 
         pattern = []
 
-        t00 = (None, "", TYPE_NOTE, "Representative image for Failure Pattern - 2 x 3 Bolts pattern considered")
+        t00 = (None, "", TYPE_NOTE, "Representative image for Failure Pattern")
         pattern.append(t00)
 
         t99 = (None, 'Failure Pattern due to Tension in Member', TYPE_IMAGE,
@@ -471,7 +473,7 @@ class Compression(Member):
 
         pattern = []
 
-        t00 = (None, "", TYPE_NOTE, "Representative image for Failure Pattern - 2 x 3 Bolts pattern considered")
+        t00 = (None, "", TYPE_NOTE, "Representative image for Failure Pattern")
         pattern.append(t00)
 
         t99 = (None, 'Failure Pattern due to Tension in Plate', TYPE_IMAGE,
@@ -480,9 +482,9 @@ class Compression(Member):
 
         return pattern
 
-    def fn_end1_end2(self):
+    def fn_end1_end2(self, arg):
 
-        end1 = self[0]
+        end1 = arg[0]
         if end1 == 'Fixed':
             return VALUES_STRUT_END2
         elif end1 == 'Free':
@@ -503,10 +505,10 @@ class Compression(Member):
         elif self == 'Roller':
             return str(files("osdag_core.data.ResourceFiles.images").joinpath("RRRRstrut.png"))
 
-    def fn_end2_image(self):
+    def fn_end2_image(self, arg):
 
-        end1 = self[0]
-        end2 = self[1]
+        end1 = arg[0]
+        end2 = arg[1]
 
         if end1 == 'Fixed':
             if end2 == 'Fixed':
@@ -532,10 +534,10 @@ class Compression(Member):
             elif end2 == 'Hinged':
                 return str(files("osdag_core.data.ResourceFiles.images").joinpath("RRRRstrut.png"))
 
-    def fn_conn_image(self):
+    def fn_conn_image(self, arg):
 
         "Function to populate section images based on the type of section "
-        img = self[0]
+        img = arg[0]
         if img == VALUES_SEC_PROFILE_Compression_Strut[0]:
             return VALUES_IMG_STRUT[0]
         elif img ==VALUES_SEC_PROFILE_Compression_Strut[1]:
@@ -549,15 +551,9 @@ class Compression(Member):
             return VALUES_IMG_TENSIONBOLTED[4]
 
 
-    def fn_profile_section(self, args=None):
-        #print(f"fn_profile_section self {self}")
-        # Use provided argument or fall back to self[0]
-        if args and len(args) > 0:
-            profile = args[0]
-        else:
-            profile = self[0]
-        # print(f'profile = {self[0]}'
-        #       f'VALUES_SEC_PROFILE_Compression_Strut {VALUES_SEC_PROFILE_Compression_Strut}')
+    def fn_profile_section(self, arg=None):
+        profile = arg[0]
+            
         if profile == 'Beams':
             return connectdb("Beams", call_type="popup")
         elif profile == 'Columns':
@@ -877,6 +873,22 @@ class Compression(Member):
         #        int(round(self.inter_plate_length, 0)) if flag else '', False)
         # out_list.append(t21)
 
+        # Populate Hover Dict (Compression Member)
+        self.hover_dict["Weld"] = (
+            f"<b>Weld</b><br>"
+            f"Size: {self.weld.size if (flag and hasattr(self.weld, 'size')) else ''} mm<br>"
+            f"Strength: {round(self.weld.strength, 2) if (flag and hasattr(self.weld, 'strength')) else ''} N/mm²<br>"
+            f"Stress: {round(self.weld.stress, 2) if (flag and hasattr(self.weld, 'stress')) else ''} N/mm<br>"
+            f"Eff. Length: {int(round(self.weld.length, 0)) if (flag and hasattr(self.weld, 'length')) else ''} mm"
+        )
+
+        self.hover_dict["Plate"] = (
+            f"Plate: {float(self.plate.length) if (flag and hasattr(self.plate, 'length')) else ''} mm x "
+            f"{float(self.plate.height) if (flag and hasattr(self.plate, 'height')) else ''} mm x "
+            f"{self.plate.thickness_provided if (flag and hasattr(self.plate, 'thickness_provided')) else ''} mm"
+        )
+
+        self.hover_dict["Member"] = f"Member: {self.result_designation if (flag and hasattr(self, 'result_designation')) else ''}"
 
         return out_list
     def func_for_validation(self, design_dictionary):
@@ -963,12 +975,18 @@ class Compression(Member):
         t1 = ('Model', self.call_3DModel)
         components.append(t1)
 
+        t2 = ('Member', self.call_3DMember)
+        components.append(t2)
+
+        t3 = ('Plate', self.call_3DPlate)
+        components.append(t3)
+
         return components
 
-    def fn_conn_type(self):
+    def fn_conn_type(self, arg):
 
         "Function to populate section size based on the type of section "
-        conn = self[0]
+        conn = arg[0]
         if conn in VALUES_SEC_PROFILE_Compression_Strut:
             return VALUES_LOCATION_1
         else:
@@ -2210,7 +2228,7 @@ class Compression(Member):
             self.flange_weld = round_up(((self.weld.effective - self.web_weld) / 4), 1, 50)
             self.weld.length = (self.web_weld + 4 * self.flange_weld)
 
-        elif design_dictionary[KEY_SEC_PROFILE] in ["Star Angles", "Back to Back Angles"] and design_dictionary[
+        elif design_dictionary[KEY_SEC_PROFILE] in ["Star Angles", Profile_name_2, Profile_name_3] and design_dictionary[
             KEY_LOCATION] == "Long Leg":
             if web == None:
                 self.web_weld = 2 * (self.section_property.max_leg - 2 * self.weld.size)
@@ -2221,7 +2239,7 @@ class Compression(Member):
             self.flange_weld = round_up((length_weld), 1, 50)
             self.weld.length = (self.web_weld + 4 * self.flange_weld)
 
-        elif design_dictionary[KEY_SEC_PROFILE] in ["Star Angles", "Back to Back Angles"] and design_dictionary[
+        elif design_dictionary[KEY_SEC_PROFILE] in ["Star Angles", Profile_name_2, Profile_name_3] and design_dictionary[
             KEY_LOCATION] == "Short Leg":
             if web == None:
                 self.web_weld = 2 * (self.section_property.min_leg - 2 * self.weld.size)
@@ -2232,7 +2250,7 @@ class Compression(Member):
             self.flange_weld = round_up((length_weld), 1, 50)
             self.weld.length = (self.web_weld + 4 * self.flange_weld)
 
-        elif design_dictionary[KEY_SEC_PROFILE] == "Angles" and design_dictionary[KEY_LOCATION] == "Long Leg":
+        elif design_dictionary[KEY_SEC_PROFILE] == Profile_name_1 and design_dictionary[KEY_LOCATION] == "Long Leg":
             if web == None:
                 self.web_weld = (self.section_property.max_leg - 2 * self.weld.size)
             else:
@@ -2257,12 +2275,16 @@ class Compression(Member):
             self.plate.height = 2 * self.section_property.max_leg + max((4 * self.weld.size), 30)
         elif design_dictionary[KEY_SEC_PROFILE] == "Star Angles" and design_dictionary[KEY_LOCATION] == "Short Leg":
             self.plate.height = 2 * self.section_property.min_leg + max((4 * self.weld.size), 30)
-        elif design_dictionary[KEY_SEC_PROFILE] in ["Back to Back Angles", "Angles"] and design_dictionary[KEY_LOCATION] == "Short Leg":
+        elif design_dictionary[KEY_SEC_PROFILE] in [Profile_name_1, Profile_name_2, Profile_name_3] and design_dictionary[KEY_LOCATION] == "Short Leg":
             self.plate.height = self.section_property.min_leg + max((4 * self.weld.size), 30)
-        elif design_dictionary[KEY_SEC_PROFILE] in ["Back to Back Angles", "Angles"] and design_dictionary[KEY_LOCATION] == "Long Leg":
+        elif design_dictionary[KEY_SEC_PROFILE] in [Profile_name_1, Profile_name_2, Profile_name_3] and design_dictionary[KEY_LOCATION] == "Long Leg":
             self.plate.height = self.section_property.max_leg + max((4 * self.weld.size), 30)
-        else:
+        elif design_dictionary[KEY_SEC_PROFILE] in ['Channels', 'Back to Back Channels']:
+            # For Channels, use depth attribute
             self.plate.height = self.section_property.depth + max((4 * self.weld.size), 30)
+        else:
+            # Default fallback for angles
+            self.plate.height = self.section_property.max_leg + max((4 * self.weld.size), 30)
 
     def get_plate_thickness(self, design_dictionary):
         """
@@ -2643,7 +2665,7 @@ class Compression(Member):
             section_type = 'I Section' """
         
         if self.section_property.max_leg == self.section_property.min_leg:
-            if self.sec_profile == "Back to Back Angles":
+            if self.sec_profile in [Profile_name_2, Profile_name_3]:
                 if self.loc == "Long Leg":
                     image = "bblequaldp"
                 else:
@@ -2657,7 +2679,7 @@ class Compression(Member):
                 image = "equaldp"
 
         else:
-            if self.sec_profile == "Back to Back Angles":
+            if self.sec_profile in [Profile_name_2, Profile_name_3]:
                 if self.loc == "Long Leg":
                     image = "bblunequaldp"
                 else:
@@ -2673,7 +2695,7 @@ class Compression(Member):
         if (self.design_status and self.failed_design_dict is None) or (not self.design_status and len(self.failed_design_dict)>0):
             if self.sec_profile == Profile_name_1 or self.sec_profile == Profile_name_2 or self.sec_profile == Profile_name_3:  # Angles and Back to Back Angles
                 self.section_property = Angle(designation = self.result_designation, material_grade = self.material)
-            if self.sec_profile == "Angles" or self.sec_profile == VALUES_SEC_PROFILE_2[0]:
+            if self.sec_profile == Profile_name_1:
                 self.report_column = {KEY_DISP_SEC_PROFILE: image,
                                         KEY_DISP_SECSIZE: (self.section_property.designation, self.sec_profile),
                                         KEY_DISP_MATERIAL: self.section_property.material,
@@ -2866,7 +2888,7 @@ class Compression(Member):
     #
     #     pattern = []
     #
-    #     t00 = (None, "", TYPE_NOTE, "Representative image for Failure Pattern - 2 x 3 Bolts pattern considered")
+    #     t00 = (None, "", TYPE_NOTE, "Representative image for Failure Pattern")
     #     pattern.append(t00)
     #
     #     t99 = (None, 'Failure Pattern due to Tension in Member', TYPE_IMAGE,
@@ -2879,7 +2901,7 @@ class Compression(Member):
     #
     #     pattern = []
     #
-    #     t00 = (None, "", TYPE_NOTE, "Representative image for Failure Pattern - 2 x 3 Bolts pattern considered")
+    #     t00 = (None, "", TYPE_NOTE, "Representative image for Failure Pattern")
     #     pattern.append(t00)
     #
     #     t99 = (None, 'Failure Pattern due to Tension in Plate', TYPE_IMAGE,

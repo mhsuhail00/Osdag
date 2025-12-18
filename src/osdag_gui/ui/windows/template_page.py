@@ -33,6 +33,8 @@ class CustomWindow(QWidget):
     downloadDatabase = Signal(str, str)
     def __init__(self, title: str, backend: object, parent):
         super().__init__()
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.parent = parent
         self.backend = backend()
 
@@ -47,6 +49,8 @@ class CustomWindow(QWidget):
         self.project_id = None
 
         self.current_tab_index = 0
+        self.input_dock = None
+        self.output_dock = None
         self.design_pref_inputs = {}
         self.prev_inputs = {}
         self.input_dock_inputs = {}
@@ -68,9 +72,10 @@ class CustomWindow(QWidget):
         self.init_ui(title)
         self.sidebar = SidebarWidget(parent=self)
         self.sidebar.openNewTab.connect(self.openNewTabEmit)
-        self.sidebar.setParent(self)
         self.sidebar.resize_sidebar(self.width(), self.height())
-        self.sidebar.move(-self.sidebar.width() + 12, self.menu_bar.height())
+        # Center sidebar vertically within the content area (below menu bar)
+        self.sidebar_y = self.height()//2 - self.sidebar.height()//4
+        self.sidebar.move(-self.sidebar.width() + 12, self.sidebar_y)
         self.sidebar_animation = QPropertyAnimation(self.sidebar, b"geometry")
         self.sidebar_animation.setDuration(150)
         self.sidebar.installEventFilter(self)
@@ -83,7 +88,7 @@ class CustomWindow(QWidget):
         from OCC.Display.backend import load_backend, get_qt_modules
 
         used_backend = load_backend(backend_str)
-        print(f"used_backend {used_backend}")
+        # print(f"used_backend {used_backend}")
 
         global display, start_display, app, _, USED_BACKEND
         if 'qt' in used_backend:
@@ -271,7 +276,7 @@ class CustomWindow(QWidget):
             view.SetUp(0, 0, 1)     # Z is up
             self.fit_all()
         except Exception as e:
-            print(f"Error setting front view: {e}")
+            print(f"[Error] setting front view: {e}")
     
     def view_back(self):
         """Set back view (looking along positive Y axis)"""
@@ -281,7 +286,7 @@ class CustomWindow(QWidget):
             view.SetUp(0, 0, 1)     # Z is up
             self.fit_all()
         except Exception as e:
-            print(f"Error setting back view: {e}")
+            print(f"[Error] setting back view: {e}")
     
     def view_left(self):
         """Set left view (looking along negative X axis)"""
@@ -291,7 +296,7 @@ class CustomWindow(QWidget):
             view.SetUp(0, 0, 1)     # Z is up
             self.fit_all()
         except Exception as e:
-            print(f"Error setting left view: {e}")
+            print(f"[Error] setting left view: {e}")
     
     def view_right(self):
         """Set right view (looking along positive X axis)"""
@@ -301,7 +306,7 @@ class CustomWindow(QWidget):
             view.SetUp(0, 0, 1)     # Z is up
             self.fit_all()
         except Exception as e:
-            print(f"Error setting right view: {e}")
+            print(f"[Error] setting right view: {e}")
     
     def view_top(self):
         """Set top view (looking along negative Z axis)"""
@@ -311,7 +316,7 @@ class CustomWindow(QWidget):
             view.SetUp(0, 1, 0)     # Y is up
             self.fit_all()
         except Exception as e:
-            print(f"Error setting top view: {e}")
+            print(f"[Error] setting top view: {e}")
     
     def view_bottom(self):
         """Set bottom view (looking along positive Z axis)"""
@@ -321,7 +326,7 @@ class CustomWindow(QWidget):
             view.SetUp(0, 1, 0)     # Y is up
             self.fit_all()
         except Exception as e:
-            print(f"Error setting bottom view: {e}")
+            print(f"[Error] setting bottom view: {e}")
     
     def view_iso_top_left(self):
         """Set isometric view from top-left"""
@@ -331,7 +336,7 @@ class CustomWindow(QWidget):
             view.SetUp(0, 0, 1)      # Z is up
             self.fit_all()
         except Exception as e:
-            print(f"Error setting top-left isometric view: {e}")
+            print(f"[Error] setting top-left isometric view: {e}")
     
     def view_iso_top_right(self):
         """Set isometric view from top-right"""
@@ -341,7 +346,7 @@ class CustomWindow(QWidget):
             view.SetUp(0, 0, 1)      # Z is up
             self.fit_all()
         except Exception as e:
-            print(f"Error setting top-right isometric view: {e}")
+            print(f"[Error] setting top-right isometric view: {e}")
     
     def view_iso_bottom_left(self):
         """Set isometric view from bottom-left"""
@@ -351,7 +356,7 @@ class CustomWindow(QWidget):
             view.SetUp(0, 0, 1)      # Z is up
             self.fit_all()
         except Exception as e:
-            print(f"Error setting bottom-left isometric view: {e}")
+            print(f"[Error] setting bottom-left isometric view: {e}")
     
     def view_iso_bottom_right(self):
         """Set isometric view from bottom-right"""
@@ -378,7 +383,6 @@ class CustomWindow(QWidget):
         """Fit all objects in the view"""
         self.display.SetProj(1, -1, 1)
         self.display.FitAll()
-        
     
     #---------------------------------CAD-SETUP-END----------------------------------------------
     
@@ -396,7 +400,7 @@ class CustomWindow(QWidget):
     def slide_in(self):
         self.sidebar_animation.stop()
         end_x = 0
-        top_offset = self.menu_bar.height()
+        top_offset = self.sidebar_y
         self.sidebar_animation.setStartValue(self.sidebar.geometry())
         self.sidebar_animation.setEndValue(QRect(end_x, top_offset, self.sidebar.width(), self.sidebar.height()))
         self.sidebar_animation.start()
@@ -405,7 +409,7 @@ class CustomWindow(QWidget):
     def slide_out(self):
         self.sidebar_animation.stop()
         end_x = -self.sidebar.width() + 12
-        top_offset = self.menu_bar.height()
+        top_offset = self.sidebar_y
         self.sidebar_animation.setStartValue(self.sidebar.geometry())
         self.sidebar_animation.setEndValue(QRect(end_x, top_offset, self.sidebar.width(), self.sidebar.height()))
         self.sidebar_animation.start()
@@ -509,7 +513,7 @@ class CustomWindow(QWidget):
         self.create_cad_view_controls()
         self.cad_log_splitter.addWidget(self.cad_widget)
 
-        self.logs_dock = LogDock()
+        self.logs_dock = LogDock(parent=self)
         self.logs_dock.setVisible(False)
         # log text
         self.textEdit = self.logs_dock.log_display
@@ -534,7 +538,6 @@ class CustomWindow(QWidget):
         # root is the greatest level of parent that is the MainWindow
         self.output_dock = OutputDock(backend=self.backend, parent=self)
         self.splitter.addWidget(self.output_dock)
-        # self.output_dock.setStyleSheet(self.output_dock.styleSheet())
         self.output_dock.hide()
 
         self.layout.addWidget(self.splitter)
@@ -638,7 +641,7 @@ class CustomWindow(QWidget):
 
         quit_action = QAction("Quit", self)
         quit_action.setShortcut(QKeySequence("Shift+Q"))
-        print("Quit..")
+        # print("Quit..")
         # quit_action.triggered.connect(self.parent.close_current_tab)
         file_menu.addAction(quit_action)
 
@@ -799,14 +802,13 @@ class CustomWindow(QWidget):
             with open(in_file, 'r') as fileObject:
                 uiObj = yaml.safe_load(fileObject)
             module = uiObj[KEY_MODULE]
-            print(module)
+            print(f"[Info] Loaded module: {module}")
 
             selected_module = self.backend.module_name()
             if selected_module == module:
                 self.ui_loaded = False
                 self.setDictToUserInputs(uiObj)
                 self.ui_loaded = True
-                self.output_dock.output_title_change(self.backend)
             else:
                 CustomMessageBox(
                     title="Information",
@@ -904,7 +906,7 @@ class CustomWindow(QWidget):
                             if set(uiObj[key_str]) != set(n[1]()):
                                 key.setCurrentIndex(1)
                             else:
-                                print(key,type(key))
+                                # print(f"[Info] Key: {key}, Type: {type(key)}")
                                 key.setCurrentIndex(1)
                             data[key_str + "_customized"] = uiObj[key_str]
             else:
@@ -1073,42 +1075,65 @@ class CustomWindow(QWidget):
     #----------------Function-Trigger-for-MenuBar-END------------------------------------------
 
     def resizeEvent(self, event):
-        self.sidebar.resize_sidebar(self.sidebar.width(), self.height())
-        top_offset = self.menu_bar.height()
-        if self.sidebar.x() < 0:
-            self.sidebar.move(-self.sidebar.width() + 12, top_offset)
 
-        input_dock_width = self.input_dock.sizeHint().width()
-        output_dock_width = self.output_dock.sizeHint().width()
-        total_width = self.width() - self.splitter.contentsMargins().left() - self.splitter.contentsMargins().right()
-        self.splitter.setMinimumWidth(0)
-        self.splitter.setCollapsible(0, True)
-        self.splitter.setCollapsible(1, True)
-        self.splitter.setCollapsible(2, True)
-        for i in range(self.splitter.count()):
-            self.splitter.widget(i).setMinimumWidth(0)
-            self.splitter.widget(i).setMaximumWidth(16777215)
-        target_sizes = [0] * self.splitter.count()
-        target_sizes[0] = input_dock_width
-        target_sizes[2] = output_dock_width
-        remaining_width = total_width - input_dock_width - output_dock_width
-        target_sizes[1] = max(0, remaining_width)
-        self.splitter.setSizes(target_sizes)
-        self.splitter.refresh()
-        self.body_widget.layout().activate()
-        self.splitter.update()
-        self.sidebar.raise_()
-        super().resizeEvent(event)
+        """Override resizeEvent with safety check."""
+        # Check if being deleted
+        if not self.isVisible() or self.signalsBlocked():
+            return
+        
+        # Check if splitter exists and has children
+        try:
+            if not hasattr(self, 'splitter') or self.splitter is None:
+                return
+            if self.splitter.count() < 3:
+                return
+            
+            # Normal Resize Event
+            self.sidebar.resize_sidebar(self.sidebar.width(), self.sidebar_y)
+            top_offset = self.menu_bar.height()
+            if self.sidebar.x() < 0:
+                self.sidebar.move(-self.sidebar.width() + 12, top_offset)
+
+            if self.input_dock.isVisible():
+                input_dock_width = self.input_dock.sizeHint().width()
+            else:
+                input_dock_width = 0
+            
+            if self.output_dock.isVisible():
+                output_dock_width = self.output_dock.sizeHint().width()
+            else:
+                output_dock_width = 0
+            total_width = self.width() - self.splitter.contentsMargins().left() - self.splitter.contentsMargins().right()
+            self.splitter.setMinimumWidth(0)
+            self.splitter.setCollapsible(0, True)
+            self.splitter.setCollapsible(1, True)
+            self.splitter.setCollapsible(2, True)
+            for i in range(self.splitter.count()):
+                self.splitter.widget(i).setMinimumWidth(0)
+                self.splitter.widget(i).setMaximumWidth(16777215)
+            target_sizes = [0] * self.splitter.count()
+            target_sizes[0] = input_dock_width
+            target_sizes[2] = output_dock_width
+            remaining_width = total_width - input_dock_width - output_dock_width
+            target_sizes[1] = max(0, remaining_width)
+            self.splitter.setSizes(target_sizes)
+            self.splitter.refresh()
+            self.body_widget.layout().activate()
+            self.splitter.update()
+            self.sidebar.raise_()
+            super().resizeEvent(event)
+            
+        except (IndexError, RuntimeError, AttributeError):
+            # Being deleted, ignore
+            return
 
     #---------------------------------Docking-Icons-Functionality-START----------------------------------------------
 
     def input_dock_toggle(self):
         self.input_dock.toggle_input_dock()
-        self.input_dock_active = not self.input_dock_active
         
     def output_dock_toggle(self):
         self.output_dock.toggle_output_dock()
-        self.output_dock_active = not self.output_dock_active
 
     def logs_dock_toggle(self):
         self.log_dock_active = not self.log_dock_active
@@ -1143,7 +1168,6 @@ class CustomWindow(QWidget):
                         
         # Update output dock icon
         if(output_is_active is not None):
-            self.output_dock_active = output_is_active
             # Update and save control state
             self.output_dock_active = output_is_active
             if self.output_dock_active:
@@ -1187,7 +1211,7 @@ class CustomWindow(QWidget):
                 on_finished()
             return
         else:
-            print(f"Invalid dock: {dock}")
+            print(f"[Error] Invalid dock: {dock}")
             return
         
         dock_widget = self.splitter.widget(dock_index)
@@ -1238,36 +1262,69 @@ class CustomWindow(QWidget):
             if on_finished:
                 on_finished()
 
+        # User requested "one step animation" with "no delay"
         self.animate_splitter_sizes(
             self.splitter,
             sizes,
             target_sizes,
-            duration=10,
+            duration=0,
             on_finished=after_anim
         )
 
     def animate_splitter_sizes(self, splitter, start_sizes, end_sizes, duration, on_finished=None):
-        steps = 1
-        interval = duration // steps
-        step_sizes = [
-            [start + (end - start) * i / steps for start, end in zip(start_sizes, end_sizes)]
-            for i in range(steps + 1)
-        ]
+        if duration <= 0:
+            # Instant update
+            splitter.setSizes(end_sizes)
+            splitter.refresh()
+            if splitter.parentWidget() and splitter.parentWidget().layout():
+                splitter.parentWidget().layout().activate()
+            splitter.update()
+            if splitter.parentWidget():
+                splitter.parentWidget().update()
+            self.update()
+            for i in range(splitter.count()):
+                widget = splitter.widget(i)
+                if widget:
+                    widget.update()
+            
+            if on_finished:
+                on_finished()
+            return
 
+        # Target 60 FPS -> ~16ms interval
+        interval = 16
+        steps = max(1, duration // interval)
+        
         current_step = 0
+
+        def ease_out_quad(t):
+            return t * (2 - t)
 
         def update_step():
             nonlocal current_step
             if current_step <= steps:
-                sizes = [int(v) for v in step_sizes[current_step]]
+                progress = current_step / steps
+                # Apply easing
+                eased_progress = ease_out_quad(progress)
+                
+                sizes = [
+                    int(start + (end - start) * eased_progress) 
+                    for start, end in zip(start_sizes, end_sizes)
+                ]
+                
                 splitter.setSizes(sizes)
                 splitter.refresh()
-                splitter.parentWidget().layout().activate()
+                if splitter.parentWidget() and splitter.parentWidget().layout():
+                    splitter.parentWidget().layout().activate()
                 splitter.update()
-                splitter.parentWidget().update()
+                if splitter.parentWidget():
+                    splitter.parentWidget().update()
                 self.update()
                 for i in range(splitter.count()):
-                    splitter.widget(i).update()
+                    widget = splitter.widget(i)
+                    if widget:
+                        widget.update()
+                
                 current_step += 1
             else:
                 timer.stop()
@@ -1294,7 +1351,7 @@ class CustomWindow(QWidget):
     #---------------------------------Docking-Icons-Functionality-END----------------------------------------------
 
     def on_check_for_update(self):
-        print("Action", "Check For Update selected.")
+        print("[Action]: Check For Update selected.")
 
     # This opens loading widget and execute Design
     def start_thread(self, data):
@@ -1308,7 +1365,7 @@ class CustomWindow(QWidget):
         self.common_function_for_save_and_design(self.backend, data, "Design")
     
     def finished_loading(self):
-        print("Testing Custom Logger!")
+        print("Custom Logger: ")
         print(self.backend.logger.logs)
         time.sleep(1)
         self.loading.hide()
@@ -1323,18 +1380,18 @@ class CustomWindow(QWidget):
                 data[data_key] = [data_values for data_values in data[data_key]
                                   if data_values not in data_key_tuple[2]]
 
-        print(f"ui_template.py common_function_for_save_and_design \n")
-        print(f"option_list {option_list} \n")
-        print(f"data {data} ")
+        # print(f"ui_template.py common_function_for_save_and_design \n")
+        # print(f"option_list {option_list} \n")
+        # print(f"data {data} ")
 
         self.design_fn(option_list, data, main)
 
         if trigger_type == "Save":
             self.saveDesign_inputs()
         elif trigger_type == "Design_Pref":
-            print(f"trigger_type == Design_Pref")
+            # print(f"trigger_type == Design_Pref")
             if self.prev_inputs != self.input_dock_inputs or self.designPrefDialog.changes != QDialog.Accepted:
-                print(f"QDialog.Accepted")
+                # print(f"QDialog.Accepted")
                 self.designPrefDialog = AdditionalInputs(main, self, input_dictionary=self.input_dock_inputs)
 
                 if 'Select Section' in self.input_dock_inputs.values():
@@ -1342,7 +1399,7 @@ class CustomWindow(QWidget):
                     self.designPrefDialog.flag = False
                 else:
                     self.designPrefDialog.flag = True
-                print(f"QDialog done")
+                # print(f"QDialog done")
                 # if self.prev_inputs != {}:
                 #     self.design_pref_inputs = {}
 
@@ -1357,8 +1414,8 @@ class CustomWindow(QWidget):
             # print(f"\n design_dictionary {self.design_inputs}")
             error = main.func_for_validation(self.design_inputs)
             status = main.design_status
-            print(f"status{status}")
-            print(f"trigger_type{trigger_type}")
+            # print(f"[INFO] Design status: {status}")
+            # print(f"[INFO] trigger_type: {trigger_type}")
 
             if status == False:
                 # Open Logs and close Loading
@@ -1379,7 +1436,7 @@ class CustomWindow(QWidget):
                 return
 
             out_list = main.output_values(status)
-            print('out_list changed',out_list)
+            # print('[INFO] out_list changed: ',out_list)
 
             for option in out_list:
                 if option[2] == TYPE_TEXTBOX:
@@ -1424,6 +1481,8 @@ class CustomWindow(QWidget):
                     try:
                         self.toggle_animate(False, 'input', on_finished=show_logs)
                         self.input_dock_active = False
+                        # Lock Basic Inputs
+                        self.input_dock.toggle_lock(set_locked_state=True)
                     except Exception:
                         input_widget = self.splitter.widget(0)
                         if input_widget:
@@ -1445,11 +1504,11 @@ class CustomWindow(QWidget):
                     hide_input()
 
             self.output_dock.output_title_change(main)
-            print('Output title changed',self.output_dock.output_title_change(main))
+            # print('[INFO] Output title changed: ',self.output_dock.output_title_change(main))
             last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-            print(' last design',last_design_folder)
+            # print('[INFO] last design: ',last_design_folder)
             if not os.path.isdir(last_design_folder):
-                print(' not os.path.isdir')
+                # print('[INFO] not os.path.isdir')
                 os.makedirs(last_design_folder)
             last_design_file = str(main.module_name()).replace(' ', '') + ".osi"
             last_design_file = os.path.join(last_design_folder, last_design_file)
@@ -1488,23 +1547,23 @@ class CustomWindow(QWidget):
                                                   KEY_DISP_COMPRESSION_COLUMN,KEY_DISP_FLEXURE,KEY_DISP_FLEXURE2,KEY_DISP_FLEXURE3,KEY_DISP_FLEXURE4,
                                                   KEY_DISP_COMPRESSION_Strut,KEY_DISP_LAPJOINTBOLTED,KEY_DISP_BUTTJOINTBOLTED]:
                 # print(self.display, self.folder, main.module, main.mainmodule)
-                print("common start")
-                print(f"main object type: {type(main)}")
-                print(f"main attributes: {dir(main)}")
-                print("main.mainmodule",main.mainmodule)
+                # print("[INFO] common start")
+                # print(f"[INFO] main object type: {type(main)}")
+                # print(f"[INFO] main attributes: {dir(main)}")
+                # print("[INFO] main.mainmodule",main.mainmodule)
 
                 self.commLogicObj = CommonDesignLogic(self.display, self.cad_widget, self.folder, main.module, main.mainmodule)
-                print(f"This is MAIN.MODULE {main.module}")
-                print(main.mainmodule)
-                # print("common start")
+                # print(f"This is MAIN.MODULE {main.module}")
+                # print("[INFO] main.mainmodule", main.mainmodule)
+                # print("[INFO] common start")
                 status = main.design_status
                 ##############trial##############
                 # status = True
                 ##############trial##############
 
-                print("Hover Dictionary: ", main.hover_dict)
+                # print("Hover Dictionary: ", main.hover_dict)
 
-                print("Calling 3D Model from CAD")
+                print("[INFO] Calling 3D Model from CAD")
                 self.commLogicObj.call_3DModel(status, main)
                 # Store the design instance for later use in report generation
                 if hasattr(self.commLogicObj, 'design_obj'):
@@ -1520,7 +1579,7 @@ class CustomWindow(QWidget):
                     # Set design status
                     self.design_instance.design_status = status
 
-                print("3D end")
+                print("[INFO] 3D end")
                 self.display_x = 90
                 self.display_y = 90
 
@@ -1544,8 +1603,8 @@ class CustomWindow(QWidget):
     def design_fn(self, op_list, data_list, main):
         design_dictionary = {}
         self.input_dock_inputs = {}
-        print(f"\n op_list {op_list}")
-        print(f"\n data_list{data_list}")
+        # print(f"\n op_list {op_list}")
+        # print(f"\n data_list{data_list}")
         for op in op_list:
             widget = self.input_dock.input_widget.findChild(QWidget, op[0])
             if op[2] == TYPE_COMBOBOX:
@@ -1582,7 +1641,7 @@ class CustomWindow(QWidget):
                 self.input_dock_inputs.update({design_pref_key: self.design_pref_inputs[design_pref_key]})
 
         if self.designPrefDialog.flag:
-            print('flag true')
+            # print('flag true')
 
             des_pref_input_list = main.input_dictionary_design_pref()
             edit_tabs_list = main.edit_tabs()
@@ -1606,16 +1665,16 @@ class CustomWindow(QWidget):
             else:
                 des_pref_input_list_updated = des_pref_input_list
 
-            print(f"design_fn des_pref_input_list_updated = {des_pref_input_list_updated}\n")
+            # print(f"[INFO] design_fn des_pref_input_list_updated = {des_pref_input_list_updated}\n")
             for des_pref in des_pref_input_list_updated:
                 tab_name = des_pref[0]
                 input_type = des_pref[1]
                 input_list = des_pref[2]
                 tab = self.designPrefDialog.ui.findChild(QWidget, tab_name)
-                print(f"design_fn tab_name = {tab_name}\n")
-                print(f"design_fn input_type = {input_type}\n")
-                print(f"design_fn input_list = {input_list}\n")
-                print(f"design_fn tab = {tab}\n")
+                # print(f"design_fn tab_name = {tab_name}\n")
+                # print(f"design_fn input_type = {input_type}\n")
+                # print(f"design_fn input_list = {input_list}\n")
+                # print(f"design_fn tab = {tab}\n")
                 for key_name in input_list:
                     key = tab.findChild(QWidget, key_name)
                     if key is None:
@@ -1627,13 +1686,13 @@ class CustomWindow(QWidget):
                         val = key.currentText()
                         design_dictionary.update({key_name: val})
         else:
-            print('flag false')
+            # print('flag false')
             for without_des_pref in main.input_dictionary_without_design_pref():
                 input_dock_key = without_des_pref[0]
                 input_list = without_des_pref[1]
                 input_source = without_des_pref[2]
-                print(f"\n ========================Check===========================")
-                print(f"\n self.design_pref_inputs.keys() {self.design_pref_inputs.keys()}")
+                # print(f"\n ========================Check===========================")
+                # print(f"\n[INFO] self.design_pref_inputs.keys() {self.design_pref_inputs.keys()}")
                 for key_name in input_list:
                     if input_source == 'Input Dock':
                         design_dictionary.update({key_name: design_dictionary[input_dock_key]})
@@ -1647,22 +1706,22 @@ class CustomWindow(QWidget):
 
         self.design_inputs = design_dictionary
         self.design_inputs = design_dictionary
-        print(f"\n self.input_dock_inputs {self.input_dock_inputs}")
-        print(f"\n design_fn design_dictionary{self.design_inputs}")
-        print(f"\n main.input_dictionary_without_design_pref(main){main.input_dictionary_without_design_pref()}")
+        # print(f"\n[INFO] self.input_dock_inputs {self.input_dock_inputs}")
+        # print(f"\n[INFO] design_fn design_dictionary{self.design_inputs}")
+        # print(f"\n[INFO] main.input_dictionary_without_design_pref(main){main.input_dictionary_without_design_pref()}")
 
     def combined_design_prefer(self, data, main):
         on_change_tab_list = main.tab_value_changed()
-        print(f"ui_template combined_design_prefer on_change_tab_list= {on_change_tab_list} \n")
+        # print(f"[INFO] ui_template combined_design_prefer on_change_tab_list= {on_change_tab_list} \n")
         for new_values in on_change_tab_list:
             (tab_name, key_list, key_to_change, key_type, f) = new_values
             tab = self.designPrefDialog.ui.tabWidget.tabs.findChild(QWidget, tab_name)
-            print(f"key_list = {key_list} \n"
-                  f"tab {tab}")
+            # print(f"[INFO] key_list = {key_list} \n"
+            #       f"[INFO] tab {tab}")
 
             for key_name in key_list:
                 key = tab.findChild(QWidget, key_name)
-                print(f"key= {key} \n")
+                # print(f"[INFO] key= {key} \n")
 
                 if isinstance(key, QComboBox):
                     self.connect_combobox_for_tab(key, tab, on_change_tab_list, main)
@@ -1738,6 +1797,8 @@ class CustomWindow(QWidget):
 
     def design_preferences(self):
         #Function to show Design Preferences Dialog
+        self.designPrefDialog.ui.state_locked = self.input_dock.state_locked
+        self.designPrefDialog.ui.set_lock()
         self.designPrefDialog.show()
 
     def saveDesign_inputs(self):
@@ -1745,9 +1806,12 @@ class CustomWindow(QWidget):
         filePath = None
         fileName = None
         if not self.save_state:
+            default_dir = os.path.join(get_documents_folder(), "Inputs.osi")
             filePath, _ = QFileDialog.getSaveFileName(self,
-                                                    "Save Design", os.path.join(self.folder, "untitled.osi"),
-                                                    "Input Files(*.osi)", None)
+                                                    "Save Design",
+                                                    default_dir,
+                                                    "Input Files(*.osi)",
+                                                    None)
             fileName = Path(filePath).stem
         else:
             record = get_project_by_id(self.project_id)
@@ -1771,23 +1835,27 @@ class CustomWindow(QWidget):
 
             CustomMessageBox(
                 title="Success",
-                text="Saved Osi Successfully!",
+                text="Saved OSI Successfully!",
                 dialogType=MessageBoxType.Success
             ).exec()
 
         except Exception as e:
             CustomMessageBox(
                 title="Application",
-                text="Cannot write file %s:\n%s" % (filePath, str(e)),
+                text="OSI file not saved.",
                 dialogType=MessageBoxType.Warning
             ).exec()
             return
     
     def saveLogMessages(self):
         """Save log messages from textEdit to a text file"""
+        default_dir = os.path.join(get_documents_folder(), "log_messages.txt")
         filePath, _ = QFileDialog.getSaveFileName(self,
-                                                  "Save Log Messages", os.path.join(self.folder, "log_messages.txt"),
-                                                  "Text Files(*.txt);;All Files(*.*)", None)
+                                                  "Save Log Messages",
+                                                  default_dir,
+                                                  "Text Files(*.txt);;All Files(*.*)",
+                                                  None
+                                                )
         if not filePath:
             return
         
@@ -1809,13 +1877,35 @@ class CustomWindow(QWidget):
             ).exec()
             return
     
+    #--------------------Unlocking-Inputs-After-Design-Start-----------------------
+    # Clear output fields
     def clear_output_fields(self):
+        # Reset the design status
+        self.backend.design_status = False
+        self.backend.design_button_status = False
         for output_field in self.output_dock.output_widget.findChildren(QLineEdit):
             output_field.clear()
         for output_field in self.output_dock.output_widget.findChildren(QPushButton):
-            if output_field.objectName() in ["btn_CreateDesign", "save_outputDock"]:
+            if output_field.objectName() == "dock_custom_button":
                 continue
             output_field.setEnabled(False)
+        
+        # Clear logs
+        self.logs_dock.clear_logs()
+    
+    # Clear Cad widget
+    def flush_cad_widget(self):
+        if hasattr(self, 'cad_widget'):
+            # Remove all AIS objects from context
+            self.cad_widget.context.RemoveAll(True)
+            # Set self references to None
+            self.cad_widget.view_cube = None
+            # Clear the stored model objects dictionary
+            self.cad_widget.model_ais_objects.clear()
+            # Update the display
+            self.cad_widget._display.Repaint()
+    
+    #--------------------Unlocking-Inputs-After-Design-Start-----------------------
 
     # Error Message Box
     def show_error_msg(self, error):
@@ -1836,18 +1926,22 @@ class CustomWindow(QWidget):
                 if len(error) > 5:
                     error_text += f"\n... and {len(error) - 5} more errors"
         else:
-            error_text = f"Error: {str(error)}"
+            error_text = f"[Error]: {str(error)}"
         
         msg_box = CustomMessageBox(
             title="Validation Error",
             text=error_text,
             dialogType=MessageBoxType.Critical
-        ).exec()
-        msg_box.finished.connect(lambda: setattr(self, '_error_dialog_open', False))
+        )
 
+        msg_box.finished.connect(lambda: setattr(self, '_error_dialog_open', False))
+        msg_box.exec()
+        
 class InputDockIndicator(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.parent = parent
         self.setObjectName("input_dock_indicator")
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)  # Fixed width, expanding height
@@ -1889,6 +1983,8 @@ class InputDockIndicator(QWidget):
 class OutputDockIndicator(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.parent = parent
         self.setObjectName("output_dock_indicator")
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)  # Fixed width, expanding height
@@ -1930,6 +2026,8 @@ class OutputDockIndicator(QWidget):
 class CadComponentCheckbox(QWidget):
     def __init__(self, backend:object, parent):
         super().__init__(parent)
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.parent = parent
         # Fetch checkbox data
         data = backend.get_3d_components()

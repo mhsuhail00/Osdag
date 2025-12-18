@@ -25,10 +25,20 @@ QToolTip {
     color: #000000;
     border: 1px solid #90AF13;
     padding: 2px 2px;
-    font-size: 10px;
+    font-size: 12px;
     border-radius: 0px;
     qproperty-alignment: AlignVCenter;
 }
+QLabel#lock_btn_tooltip {
+    background-color: #f1f1f1;
+    color: #000000;
+    border: 1px solid #90AF13;
+    padding: 4px;
+    font-size: 15px;
+    border-radius: 0px;
+    qproperty-alignment: AlignVCenter;
+}
+
 QSplitter::handle {
     background-color: #D0D0D0;
 }
@@ -156,6 +166,36 @@ QPushButton#navbar_button[state="active"] {
     text-align: left;
 }
 
+QPushButton#navbar_button_under_dev {
+    background-color: #f8f9fa;
+    color: #817d86;
+    padding: 4px 4px 8px 8px;
+    font-weight: normal;
+    border-radius: 0px;
+    border: none;
+    border-top: 1px solid #f8f9fa;
+    border-bottom: 1px solid #f8f9fa;
+    text-align: left;
+}
+
+QPushButton#navbar_button_under_dev:hover {
+    background-color: transparent;
+    color: #000000;
+    border-top: 1px solid #888888;
+    border-bottom: 1px solid #888888;
+}
+
+QPushButton#navbar_button_under_dev[state="active"] {
+    background-color: #888888;
+    color: #000000;
+    border-radius: 0px;
+    border: none;
+    padding: 4px 4px 8px 8px;
+    border-top: 1px solid #888888;
+    border-bottom: 1px solid #888888;
+    text-align: left;
+}
+
 /* Menu Button */
 QPushButton#menu_button {
     font-size: 14px;
@@ -196,6 +236,33 @@ QPushButton#dock_custom_button {
 QPushButton#dock_custom_button:pressed {
     background-color: #7d9710;
 }
+
+/* Lock Button */
+QPushButton#lock_btn {
+    background-color: #f4f4f4;
+    border: none;
+    padding: 7px;
+    border-radius: 4px;
+}
+QPushButton#lock_btn:hover {
+    background-color: #e0e0e0;
+}
+QPushButton#lock_btn:checked {
+    background-color: #FFA500;
+}
+QPushButton#lock_btn:unchecked {
+    background-color: #f4f4f4;
+}
+QPushButton#lock_btn:unchecked:hover {
+    background-color: #e0e0e0;
+}
+QPushButton#lock_btn:checked:hover {
+    background-color: #fa7a02;
+}
+QPushButton#lock_btn[forceHover="true"] {
+    background: #fa7a02;
+}
+
 
 /* Search Result Project Button */
 QPushButton#search_result_proj_btn {
@@ -931,7 +998,6 @@ QWidget#logs_dock QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
 }
 
 /*=======================Input-Dock===========================*/
-
 QScrollArea#inputs_vscrollarea,
 QScrollArea#outputs_vscrollarea {
     border: 1px solid #EFEFEC;
@@ -1038,6 +1104,11 @@ QScrollArea#outputs_vscrollarea QScrollBar::sub-page:vertical {
     padding: 0 4px;
     margin-top: -12px;
     background-color: white;
+}
+
+#inputs_container QLineEdit:disabled, #inputs_container QComboBox:disabled{
+    background: #f1f1f1;
+    color: #666;
 }
 
 QWidget#outputs_group_container,

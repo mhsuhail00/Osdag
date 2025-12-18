@@ -61,7 +61,7 @@ class ThemeToggleButton(QPushButton):
         self.theme = parent.theme_manager
         self.setFixedSize(50, 50)
         self.setObjectName("themeToggle")
-        self.setCursor(Qt.PointingHandCursor)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.update_icon()
         self.clicked.connect(self._toggle_theme)
 
@@ -80,6 +80,8 @@ class ThemeToggleButton(QPushButton):
 class BackgroundSvgWidget(QWidget):
     def __init__(self, svg_light, svg_dark, parent=None):
         super().__init__(parent)
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.theme = parent.theme_manager
         self.is_light = True
         self.light = QSvgRenderer(svg_light)
@@ -123,6 +125,8 @@ class BackgroundSvgWidget(QWidget):
 class FadeWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self._opacity = 1.0
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
@@ -159,7 +163,8 @@ class HomeWindow(QWidget):
     downloadDatabase = Signal(str, str)
     def __init__(self):
         super().__init__()
- 
+        # Ensures automatic deletion when closed
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         # Get theme manager from app instance
         self.app = QApplication.instance()
         self.theme_manager = self.app.theme_manager
@@ -330,16 +335,21 @@ class HomeWindow(QWidget):
         self.bottom_right_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.bottom_svg_widget_1 = QSvgWidget()
-        self.bottom_svg_widget_1.setFixedSize(130, 60)         # 1032 x 479 ~ 130 x 60
+        self.bottom_svg_widget_1.setFixedSize(100, 46)         # 1032 x 479(ratio 2.15) ~ 100 x 46
         self.bottom_right_h_layout.addWidget(self.bottom_svg_widget_1)
 
         self.bottom_svg_widget_2 = QSvgWidget()
-        self.bottom_svg_widget_2.setFixedSize(122, 60)
+        self.bottom_svg_widget_2.setFixedSize(95, 47)         # 970 x 479(ratio 2.02) ~ 95 x 47
         self.bottom_right_h_layout.addWidget(self.bottom_svg_widget_2)
 
         self.bottom_svg_widget_3 = QSvgWidget()
-        self.bottom_svg_widget_3.setFixedSize(350, 40)
-        self.bottom_right_h_layout.addWidget(self.bottom_svg_widget_3, alignment=Qt.AlignmentFlag.AlignBottom)
+        self.bottom_svg_widget_3.setFixedSize(306, 35)  # 2048 x 234 (ratio 8.75) ~ 250 x 28.6
+        self.bottom_right_h_layout.addWidget(self.bottom_svg_widget_3, alignment=Qt.AlignmentFlag.AlignVCenter)
+
+        self.bottom_svg_widget_4 = QSvgWidget()
+        self.bottom_svg_widget_4.setFixedSize(41, 43)       # 490 x 510(ratio 0.96) ~ 58 x 60
+        self.bottom_right_h_layout.addWidget(self.bottom_svg_widget_4, alignment=Qt.AlignmentFlag.AlignBottom)
+
         self.bottom_right_h_layout.addStretch(1)
 
         content_v_layout.addWidget(self.bottom_right_container)
@@ -348,7 +358,7 @@ class HomeWindow(QWidget):
         main_v_layout.addLayout(main_h_layout)
 
         self.show_home()
-    
+
     def paintEvent(self, event: QPaintEvent):
         if self.theme_manager.is_light():
             self.top_svg_widget_1.load(":/vectors/Osdag_label_light.svg")
@@ -356,12 +366,14 @@ class HomeWindow(QWidget):
             self.bottom_svg_widget_1.load(":/vectors/MOE_light.svg")
             self.bottom_svg_widget_2.load(":/vectors/MOS_light.svg")
             self.bottom_svg_widget_3.load(":/vectors/ConstructSteel_light.svg")
+            self.bottom_svg_widget_4.load(":/vectors/INSDAG_light.svg")
         else:
             self.top_svg_widget_1.load(":/vectors/Osdag_label_dark.svg")
             self.middle_top_svg_widget.load(":/vectors/Osdag_tagline_dark.svg")
             self.bottom_svg_widget_1.load(":/vectors/MOE_dark.svg")
             self.bottom_svg_widget_2.load(":/vectors/MOS_dark.svg")
             self.bottom_svg_widget_3.load(":/vectors/ConstructSteel_dark.svg")
+            self.bottom_svg_widget_4.load(":/vectors/INSDAG_dark.svg")
         return super().paintEvent(event)
 
     def _clear_layout(self, layout):
