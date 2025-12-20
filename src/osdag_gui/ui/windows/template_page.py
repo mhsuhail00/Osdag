@@ -1553,7 +1553,8 @@ class CustomWindow(QWidget):
                 # print(f"[INFO] main attributes: {dir(main)}")
                 # print("[INFO] main.mainmodule",main.mainmodule)
 
-                self.commLogicObj = CommonDesignLogic(self.display, self.cad_widget, self.folder, main, main.mainmodule)
+                self.commLogicObj = CommonDesignLogic(self.display, self.cad_widget, self.folder, main.module, main.mainmodule)
+                self.commLogicObj.module_object = main
                 # print(f"This is MAIN.MODULE {main.module}")
                 # print("[INFO] main.mainmodule", main.mainmodule)
                 # print("[INFO] common start")
@@ -1565,15 +1566,7 @@ class CustomWindow(QWidget):
                 # print("Hover Dictionary: ", main.hover_dict)
 
                 print("[INFO] Calling 3D Model from CAD")
-                print("[INFO] Calling 3D Model from CAD")
-                if main.module == KEY_DISP_LAPJOINTWELDED:
-                    # Direct call for Lap Joint Welded to bypass common logic issues
-                    background = "gradient_light"
-                    if not self.theme.is_light():
-                        background = "gradient_dark"
-                    main.call_3DModel(self, background)
-                else:
-                    self.commLogicObj.call_3DModel(status, main)
+                self.commLogicObj.call_3DModel(status, main)
                 # Store the design instance for later use in report generation
                 if hasattr(self.commLogicObj, 'design_obj'):
                     # Store reference to the design instance
