@@ -2070,6 +2070,7 @@ class CadComponentCheckbox(QWidget):
                         cb.blockSignals(True)
                         cb.setChecked(False)
                         cb.blockSignals(False)
+                QApplication.processEvents()
                 # Call display function
                 f(self.parent, background)
             else:
