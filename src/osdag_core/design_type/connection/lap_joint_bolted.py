@@ -350,11 +350,7 @@ class LapJointBolted(MomentConnection):
             f"No. of Bolts: {int(self.number_bolts) if flag else ''}"
         )
 
-        self.hover_dict["Nut"] = (
-            f"<b>Nut</b><br>"
-            f"Grade: <br>"
-            f"Thickness:  mm"
-        )
+
 
 
 

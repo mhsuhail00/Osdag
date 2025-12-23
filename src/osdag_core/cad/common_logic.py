@@ -2506,7 +2506,7 @@ class CommonDesignLogic(object):
                 label_plate1 = ["Plate 1", hover_dict["Plate 1"]]
                 label_plate2 = ["Plate 2", hover_dict["Plate 2"]]
                 label_bolt = ["Bolt", hover_dict["Bolt"]]
-                label_nut = ["Nut", hover_dict["Nut"]]
+
 
                 self.assembly,self.plate1_model,self.plate2_model,self.bolt_models,self.nuts_models = self.createBoltedLapJoint()
 
@@ -2518,7 +2518,7 @@ class CommonDesignLogic(object):
                                                 color=bolt_color, label=label_bolt, canvas=self.cad_widget)
                     for nut in self.nuts_models:
                         osdag_display_shape(self.display, nut, update=True,
-                                                color=bolt_color, label=label_nut, canvas=self.cad_widget)
+                                                color=bolt_color, label=label_bolt, canvas=self.cad_widget)
 
                 elif self.component == "Column":
                     osdag_display_shape(self.display, plate1, update=True, material=Graphic3d_NOM_ALUMINIUM, label=label_plate1, canvas=self.cad_widget)
