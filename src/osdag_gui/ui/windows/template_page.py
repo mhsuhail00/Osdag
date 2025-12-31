@@ -62,6 +62,7 @@ class CustomWindow(QWidget):
         self.backend.design_status = False
         self.backend.design_button_status = False
         self.fuse_model = None
+        self._pso_manager = None  # Lazy init for Plate Girder PSO UI management
         self.setObjectName("template_page")
 
         # This initializes the cad Window in specific backend 
@@ -80,6 +81,16 @@ class CustomWindow(QWidget):
         self.sidebar_animation.setDuration(150)
         self.sidebar.installEventFilter(self)
         self.sidebar.raise_()
+        
+    def closeEvent(self, event):
+        """Handle window close event to ensure proper resource cleanup."""
+        # Cleanup PSO resources if they exist
+        if hasattr(self, '_pso_manager') and self._pso_manager:
+            try:
+                self._pso_manager.cleanup()
+            except Exception:
+                pass
+        super().closeEvent(event)
 
     #---------------------------------CAD-SETUP-START----------------------------------------------
 
@@ -455,7 +466,7 @@ class CustomWindow(QWidget):
 
     def slide_in(self):
         self.sidebar_animation.stop()
-        end_x = 0
+        end_x = 5
         top_offset = self.sidebar_y
         self.sidebar_animation.setStartValue(self.sidebar.geometry())
         self.sidebar_animation.setEndValue(QRect(end_x, top_offset, self.sidebar.width(), self.sidebar.height()))
@@ -543,6 +554,7 @@ class CustomWindow(QWidget):
         input_dock_width = self.input_dock.sizeHint().width()
         self._input_dock_default_width = input_dock_width
         self.splitter.addWidget(self.input_dock)
+
 
         central_widget = QWidget()
         central_H_layout = QHBoxLayout(central_widget)
@@ -750,6 +762,16 @@ class CustomWindow(QWidget):
         graphics_menu.addAction(side_view_action)
 
         graphics_menu.addSeparator()
+        
+        # Toggle Optimization Graphs (for Plate Girder PSO visualization)
+        self.toggle_opt_action = QAction("Show Optimization Graph", self)
+        self.toggle_opt_action.setShortcut(QKeySequence("Alt+G"))
+        self.toggle_opt_action.triggered.connect(self.toggle_optimization_view)
+        self.toggle_opt_action.setEnabled(False)  # Enabled after PSO runs
+        graphics_menu.addAction(self.toggle_opt_action)
+
+        graphics_menu.addSeparator()
+
 
         # Database Menu
         database_menu = self.menu_bar.addMenu("Database")
@@ -1113,16 +1135,20 @@ class CustomWindow(QWidget):
         
         # Check if splitter exists and has children
         try:
+            # Normal Resize Event
+            self.sidebar.resize_sidebar(self.width(), self.height())
+            # Update sidebar position to keep it centered vertically
+            self.sidebar_y = (self.height() - self.menu_bar.height() - self.sidebar.height()) // 2 + self.menu_bar.height()
+            top_offset = self.sidebar_y
+            if self.sidebar.x() < 0:
+                self.sidebar.move(-self.sidebar.width() + 12, top_offset)
+            else:
+                self.sidebar.move(self.sidebar.x(), top_offset)
+                
             if not hasattr(self, 'splitter') or self.splitter is None:
                 return
             if self.splitter.count() < 3:
                 return
-            
-            # Normal Resize Event
-            self.sidebar.resize_sidebar(self.sidebar.width(), self.sidebar_y)
-            top_offset = self.menu_bar.height()
-            if self.sidebar.x() < 0:
-                self.sidebar.move(-self.sidebar.width() + 12, top_offset)
 
             if self.input_dock.isVisible():
                 input_dock_width = self.input_dock.sizeHint().width()
@@ -1386,15 +1412,72 @@ class CustomWindow(QWidget):
     # This opens loading widget and execute Design
     def start_thread(self, data):
         # Use safety module for multiprocessing (already initialized at startup)
-        # This is safe to call multiple times - will be ignored if already set
         from osdag_gui.OS_safety_protocols import ensure_safe_startup
         ensure_safe_startup()
+        
+        # Ensure CAD widget is visible
+        self.cad_widget.show()
+        
+        # Check if this is Plate Girder with Optimized design type
+        module_name = self.backend.module_name()
+        is_plate_girder = module_name.upper() == "PLATE GIRDER"
+        
+        # Read design type from the actual input widget (combobox)
+        design_type = 'Unknown'
+        if is_plate_girder and hasattr(self, 'input_dock') and self.input_dock:
+            design_type_widget = self.input_dock.input_widget.findChild(QComboBox, 'Total.Design_Type')
+            if design_type_widget:
+                design_type = design_type_widget.currentText()
+        
+        is_optimized = design_type == 'Optimized'
+        
+        print(f"[DEBUG] module_name: '{module_name}', design_type: '{design_type}'")
+        print(f"[DEBUG] is_plate_girder: {is_plate_girder}, is_optimized: {is_optimized}")
+        
+        if is_plate_girder and is_optimized:
+            print("[DEBUG] → Using PSO Visualization (via PSOUIManager)")
+            # Lazy init PSOUIManager for Plate Girder module
+            if self._pso_manager is None:
+                from osdag_core.design_type.plate_girder.gui.pso_ui_manager import PSOUIManager
+                self._pso_manager = PSOUIManager(self)
+            else:
+                # Cleanup previous resources before new design
+                self._pso_manager.cleanup()
+            
+            # Use PSO visualization instead of loading popup
+            if not self._pso_manager.start_visualization(data):
+                # Fallback to standard design if visualization fails
+                self._run_standard_design(data)
+        else:
+            print("[DEBUG] → Using standard loading popup")
+            # Cleanup any previous PSO visualization
+            if self._pso_manager:
+                self._pso_manager.cleanup()
+            # Standard loading popup for all other modules
+            self._run_standard_design(data)
     
+    # NOTE: PSO visualization methods moved to osdag_core/design_type/plate_girder/gui/pso_ui_manager.py
+    # Methods removed: _start_pso_visualization, _restore_cad_from_pso, _show_pso_from_cad,
+    # _restore_initial_layout_for_plate_girder, _cleanup_pso_resources, _on_pso_complete
+    # Now delegated to self._pso_manager (PSOUIManager instance)
+    
+    def _run_standard_design(self, data):
+        """Run standard design flow with loading popup (for non-Plate Girder modules)."""
         self.loading = LoadingDialogManager(self.theme.is_light())
         self.loading.show()
         self.setEnabled(False)
         time.sleep(1)
         self.common_function_for_save_and_design(self.backend, data, "Design")
+    
+    def toggle_optimization_view(self):
+        """Toggle between PSO visualization and CAD view. 
+        Delegates to PSOUIManager for Plate Girder module.
+        """
+        if self._pso_manager:
+            self._pso_manager.toggle_view()
+        elif hasattr(self, 'cad_widget') and self.cad_widget:
+            # No PSO manager, just ensure CAD is shown
+            self.cad_widget.show()
     
     def finished_loading(self):
         # print("Custom Logger: ")
@@ -1581,7 +1664,8 @@ class CustomWindow(QWidget):
                                                   KEY_DISP_TENSION_WELDED, KEY_DISP_COLUMNCOVERPLATE, KEY_DISP_COLUMNCOVERPLATEWELD,
                                                   KEY_DISP_COLUMNENDPLATE, KEY_DISP_BCENDPLATE, KEY_DISP_BB_EP_SPLICE,
                                                   KEY_DISP_COMPRESSION_COLUMN,KEY_DISP_FLEXURE,KEY_DISP_FLEXURE2,KEY_DISP_FLEXURE3,KEY_DISP_FLEXURE4,
-                                                  KEY_DISP_STRUT_WELDED_END_GUSSET,KEY_DISP_LAPJOINTBOLTED,KEY_DISP_BUTTJOINTBOLTED, KEY_DISP_LAPJOINTWELDED]:
+                                                  KEY_DISP_COMPRESSION_STRUT, KEY_DISP_STRUT_WELDED_END_GUSSET,KEY_DISP_LAPJOINTBOLTED,KEY_DISP_BUTTJOINTBOLTED, 
+                                                  KEY_DISP_LAPJOINTWELDED, KEY_DISP_BUTTJOINTWELDED]:
                 # print(self.display, self.folder, main.module, main.mainmodule)
                 # print("[INFO] common start")
                 # print(f"[INFO] main object type: {type(main)}")
@@ -1941,6 +2025,14 @@ class CustomWindow(QWidget):
     #--------------------Unlocking-Inputs-After-Design-Start-----------------------
     # Clear output fields
     def clear_output_fields(self):
+        # Flush PSO Visualization when inputs are unlocked/cleared
+        self._pso_manager.cleanup() if self._pso_manager else None
+        if hasattr(self, 'toggle_opt_action'):
+            self.toggle_opt_action.setEnabled(False)
+        self.cad_widget.show()
+        if hasattr(self, 'logs_dock') and self.logs_dock:
+            self.logs_dock.show()
+            
         # Reset the design status
         self.backend.design_status = False
         self.backend.design_button_status = False

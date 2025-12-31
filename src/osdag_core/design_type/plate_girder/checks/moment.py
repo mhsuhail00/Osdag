@@ -3,7 +3,7 @@ from ....utils.common.is800_2007 import IS800_2007
 from ....utils.common.Unsymmetrical_Section_Properties import Unsymmetrical_I_Section_Properties
 from ..core.utils import get_K_from_warping_restraint
 from ..core.section import calc_yj
-from ..data.constants import *
+from ....Common import *
 
 def corrected_design_bending_strength(section_class, Zp, Ze, Fy, gamma_m0, support_condition):
     """
@@ -69,6 +69,9 @@ def calc_Mdv(V, Vd, Zp, Ze, Fy, gamma_m0, D, tw, tf_top, tf_bot):
     # Calculating Mdv
     Mdv = Md - beta * (Md - Mfd)
 
+    # IS 800 Cl. 9.2.2: ...but not less than the plastic resistance of the flanges alone, Mfd
+    Mdv = max(Mdv, Mfd, 0.0)
+
     # Limiting value as per the provided formula
     Mdv_limit = (1.2 * Ze * Fy) / gamma_m0
 
@@ -91,24 +94,40 @@ def calc_Mdv_lat_unsupported(V, Vd, Zp, Ze, Fy, gamma_m0, D, tw, tf_top, tf_bot,
 
     # Calculating Mdv
     Mdv = Md - beta * (Md - Mfd)
+    
+    # Ensure Mdv is not negative and at least Mfd if Md > Mfd
+    if Md > Mfd:
+        Mdv = max(Mdv, Mfd)
+    Mdv = max(Mdv, 0.0)
 
     # Limiting value as per the provided formula
     Mdv_limit = (1.2 * Ze * Fy) / gamma_m0
     
     return round(min(Mdv, Mdv_limit), 2)
 
-def moment_capacity_laterally_supported(V, Zp, Ze, Fy, gamma_m0, D, tw, tf_top, tf_bot, section_class, support_condition, load_moment):
+def moment_capacity_laterally_supported(V, Zp, Ze, Fy, gamma_m0, D, tw, tf_top, tf_bot, section_class, support_condition, load_moment, debug=False):
     A_vg = (D - tf_top - tf_bot) * tw
     V_d = ((A_vg * Fy) / (math.sqrt(3) * gamma_m0))
     
     if V > 0.6 * V_d: # high shear
         Md = calc_Mdv(V, V_d, Zp, Ze, Fy, gamma_m0, D, tw, tf_top, tf_bot)
+        if debug:
+            print(f"[DEBUG] High Shear: V={V:.2f} > 0.6*V_d={0.6*V_d:.2f}. Mdv={Md:.2f}")
     else: # low shear
         # Use corrected function instead of buggy IS800_2007 version
         Md = corrected_design_bending_strength(section_class, Zp, Ze, Fy, gamma_m0, support_condition)
+        if debug:
+            print(f"[DEBUG] Low Shear: V={V:.2f} <= 0.6*V_d={0.6*V_d:.2f}. Md={Md:.2f}")
+    
+    if debug:
+        print(f"[DEBUG] Supported Moment Check: Zp={Zp:.2f}, Ze={Ze:.2f}, Md={Md/1e6:.2f} kNm, Applied={load_moment/1e6:.2f} kNm")
         
-    moment_ratio = load_moment / Md
-    is_safe = Md >= load_moment
+    if Md > 1.0: # avoid division by zero or negative capacity
+        moment_ratio = load_moment / Md
+    else:
+        moment_ratio = 1e6 # Assign very high ratio for essentially zero capacity
+        
+    is_safe = Md >= load_moment and Md > 0
     return is_safe, Md, moment_ratio, V_d
 
 def bending_check_lat_unsupported(beta_b_lt, plast_sec_mod_z, elast_sec_mod_z, fy, M_cr, section_class, gamma_m0):
@@ -134,7 +153,7 @@ def bending_check_lat_unsupported_with_alpha(beta_b_lt, plast_sec_mod_z, elast_s
     Md = IS800_2007.cl_8_2_2_Unsupported_beam_bending_strength(plast_sec_mod_z, elast_sec_mod_z, fbd_lt, section_class)
     return round(Md, 2), lambda_lt, phi_lt, X_lt, fbd_lt
 
-def moment_capacity_laterally_unsupported(E, LLT, D, tf_top, tf_bot, Bf_top, Bf_bot, tw, LoadingCase, gamma_m0, Fy, shear_force, warping_condition, load_moment, plast_sec_mod_z, elast_sec_mod_z, section_class, alpha_lt):
+def moment_capacity_laterally_unsupported(E, LLT, D, tf_top, tf_bot, Bf_top, Bf_bot, tw, LoadingCase, gamma_m0, Fy, shear_force, warping_condition, load_moment, plast_sec_mod_z, elast_sec_mod_z, section_class, alpha_lt, debug=False):
     if Bf_top == Bf_bot and tf_top == tf_bot:
         yj_val = 0
     else:
@@ -150,9 +169,9 @@ def moment_capacity_laterally_unsupported(E, LLT, D, tf_top, tf_bot, Bf_top, Bf_
     
     # We need Iy, It, Iw. These should be passed or calculated.
     # I'll calculate them here using Unsymmetrical_I_Section_Properties
-    Iy = Unsymmetrical_I_Section_Properties.calc_MomentOfAreaY(D, Bf_top, Bf_bot, tw, tf_top, tf_bot)
-    It = Unsymmetrical_I_Section_Properties.calc_TorsionConstantIt(D, Bf_top, Bf_bot, tw, tf_top, tf_bot)
-    Iw = Unsymmetrical_I_Section_Properties.calc_WarpingConstantIw(D, Bf_top, Bf_bot, tw, tf_top, tf_bot)
+    Iy = Unsymmetrical_I_Section_Properties.calc_MomentOfAreaY(D, Bf_top, Bf_bot, tw, tf_top, tf_bot, debug=debug)
+    It = Unsymmetrical_I_Section_Properties.calc_TorsionConstantIt(D, Bf_top, Bf_bot, tw, tf_top, tf_bot, debug=debug)
+    Iw = Unsymmetrical_I_Section_Properties.calc_WarpingConstantIw(D, Bf_top, Bf_bot, tw, tf_top, tf_bot, debug=debug)
     
     # Mcr calc
     yg = D / 2
@@ -200,8 +219,17 @@ def moment_capacity_laterally_unsupported(E, LLT, D, tf_top, tf_bot, Bf_top, Bf_
     
     if shear_force > 0.6 * V_d:  # high shear
         Md = calc_Mdv_lat_unsupported(shear_force, V_d, plast_sec_mod_z, elast_sec_mod_z, Fy, gamma_m0, D, tw, tf_top, tf_bot, Md)
+        if debug:
+            print(f"[DEBUG] High Shear (Unsupp): V={shear_force:.2f} > 0.6*V_d={0.6*V_d:.2f}. Mdv={Md:.2f}")
+
+    if debug:
+        print(f"[DEBUG] Unsupported Moment Check: Zp={plast_sec_mod_z:.2f}, Ze={elast_sec_mod_z:.2f}, M_cr={M_cr/1e6:.2f} kNm, X_lt={X_lt:.4f}, fbd_lt={fbd_lt:.2f}, Md={Md/1e6:.2f} kNm, Applied={load_moment/1e6:.2f} kNm")
     
-    moment_ratio = load_moment / Md
-    is_safe = Md >= load_moment
+    if Md > 1.0:
+        moment_ratio = load_moment / Md
+    else:
+        moment_ratio = 1e6
+        
+    is_safe = Md >= load_moment and Md > 0
     
     return is_safe, Md, moment_ratio, V_d, M_cr, lambda_lt, phi_lt, X_lt, fbd_lt
