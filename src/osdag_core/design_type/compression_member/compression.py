@@ -2834,7 +2834,15 @@ class Compression(Member):
                     KEY_DISP_EFFECTIVE_AREA_PARA: self.effective_area_factor,
                     KEY_DISP_SECSIZE:  str(self.sec_list),
                     "Selected Section Details": self.report_column,
-                    }
+                    'Weld Details': '',
+                    KEY_DISP_WELD_SIZE: str(self.weld.size) if hasattr(self.weld, 'size') else 'N/A',
+                    KEY_DISP_DP_WELD_FAB: self.weld.fabrication if hasattr(self.weld, 'fabrication') else 'Shop',
+                    KEY_DISP_DP_WELD_MATERIAL_G_O: str(self.weld.fu_overwrite) if hasattr(self.weld, 'fu_overwrite') else 'N/A',
+                    'Gusset Plate Details': '',
+                    KEY_OUT_GUSSET_PLATE_THICKNNESS: str(int(round(self.plate.thickness_provided, 0))) if hasattr(self.plate, 'thickness_provided') else 'N/A',
+                    KEY_OUT_PLATE_HEIGHT: str(int(round(self.plate.height, 0))) if hasattr(self.plate, 'height') else 'N/A',
+                    KEY_OUT_PLATE_LENGTH: str(int(round(self.plate.length, 0))) if hasattr(self.plate, 'length') else 'N/A',
+                }
 
             self.report_check = []
 
@@ -2930,6 +2938,195 @@ class Compression(Member):
                                 get_pass_fail(self.load.axial_force * 10 ** -3, round(self.result_capacity * 10 ** -3, 2), relation="leq"))
             self.report_check.append(t1)
 
+            # Add Weld Design Section
+            t1 = ('SubSection', 'Design of Weld', '|p{5cm}|p{2cm}|p{7cm}|p{2cm}|')
+            self.report_check.append(t1)
+
+            # Weld Type (informational - no symbol, no Pass/Fail)
+            t1 = ('Weld Type', '', 'Fillet Weld', '')
+            self.report_check.append(t1)
+
+            # Weld Size (informational - no symbol, no Pass/Fail)
+            if hasattr(self.weld, 'size'):
+                t1 = ('Weld Size (mm)', '', 
+                    NoEscape(f'$s_w = {self.weld.size}$ mm'),
+                    '')
+                self.report_check.append(t1)
+
+            # Design Strength (informational - no symbol, no Pass/Fail)
+            if hasattr(self.weld, 'strength'):
+                fu = getattr(self.weld, 'fu', 410)
+                gamma_mw = 1.25
+                
+                t1 = ('Design Strength of Weld (N/mm)', '',
+                    NoEscape(f'$f_w = \\dfrac{{f_u}}{{\\sqrt{{3}} \\times \\gamma_{{mw}}}} = \\dfrac{{{fu}}}{{\\sqrt{{3}} \\times {gamma_mw}}} = {round(self.weld.strength, 2)}$ N/mm [Ref. IS 800:2007, Cl. 10.5.7.1]'),
+                    '')
+                self.report_check.append(t1)
+
+            # Long Joint Reduction Factor (informational - no symbol, no Pass/Fail)
+            if hasattr(self.weld, 'beta_lw'):
+                t1 = ('Long Joint Reduction Factor', '',
+                    NoEscape(f'$\\beta_{{lw}} = {round(self.weld.beta_lw, 2)}$ [Ref. IS 800:2007, Cl. 10.5.7.3]'),
+                    '')
+                self.report_check.append(t1)
+
+            # Reduced Design Strength (informational - no symbol, no Pass/Fail)
+            if hasattr(self.weld, 'strength_red') and hasattr(self.weld, 'beta_lw') and hasattr(self.weld, 'strength'):
+                fw = round(self.weld.strength, 2)
+                beta_lw = round(self.weld.beta_lw, 2)
+                fw_red = round(self.weld.strength_red, 2)
+                
+                t1 = ('Reduced Design Strength (N/mm)', '',
+                    NoEscape(f"$f'_w = \\beta_{{lw}} \\times f_w = {beta_lw} \\times {fw} = {fw_red}$ N/mm"),
+                    '')
+                self.report_check.append(t1)
+
+            # Actual Stress (informational - no symbol, no Pass/Fail)
+            if hasattr(self.weld, 'stress') and hasattr(self, 'load'):
+                P = round(self.load.axial_force / 1000, 2)
+                sw = self.weld.size
+                Leff = int(round(self.weld.length, 0))
+                tau_w = round(self.weld.stress, 2)
+                
+                t1 = ('Actual Stress in Weld (N/mm)', '',
+                    NoEscape(f'$\\tau_w = \\dfrac{{P}}{{0.7 \\times s_w \\times L_{{eff}}}} = \\dfrac{{{P} \\times 10^3}}{{0.7 \\times {sw} \\times {Leff}}} = {tau_w}$ N/mm'),
+                    '')
+                self.report_check.append(t1)
+
+            # Effective Weld Length (informational - no symbol, no Pass/Fail)
+            if hasattr(self.weld, 'length'):
+                t1 = ('Effective Weld Length (mm)', '',
+                    NoEscape(f'$L_{{eff}} = {int(round(self.weld.length, 0))}$ mm'),
+                    '')
+                self.report_check.append(t1)
+
+            # Weld Check (CONSTRAINT - HAS symbol and Pass/Fail)
+            if hasattr(self.weld, 'stress') and hasattr(self.weld, 'strength_red'):
+                tau_w = round(self.weld.stress, 2)
+                fw_red = round(self.weld.strength_red, 2)
+                weld_status = get_pass_fail(self.weld.stress, self.weld.strength_red, relation='leq')
+                
+                t1 = ('Weld Check', NoEscape(r"$\tau_{w} \leq f'_{w}$"),
+                    NoEscape(f'${tau_w} \\leq {fw_red}$'),
+                    weld_status)
+                self.report_check.append(t1)
+
+            # Add Gusset Plate Design Section
+            t1 = ('SubSection', 'Design of Gusset Plate', '|p{5cm}|p{2cm}|p{7cm}|p{2cm}|')
+            self.report_check.append(t1)
+
+            # Plate Thickness (informational - no symbol, no Pass/Fail)
+            if hasattr(self.plate, 'thickness_provided'):
+                tp = int(round(self.plate.thickness_provided, 0))
+                t1 = ('Gusset Plate Thickness (mm)', '',
+                    NoEscape(f'$t_p = {tp}$ mm'),
+                    '')
+                self.report_check.append(t1)
+
+            # Plate Height (informational - no symbol, no Pass/Fail)
+            if hasattr(self.plate, 'height'):
+                hp = int(round(self.plate.height, 0))
+                t1 = ('Gusset Plate Height (mm)', '',
+                    NoEscape(f'$h_p = {hp}$ mm'),
+                    '')
+                self.report_check.append(t1)
+
+            # Plate Length (informational - no symbol, no Pass/Fail)
+            if hasattr(self.plate, 'length'):
+                lp = int(round(self.plate.length, 0))
+                t1 = ('Gusset Plate Length (mm)', '',
+                    NoEscape(f'$l_p = {lp}$ mm'),
+                    '')
+                self.report_check.append(t1)
+
+            # Plate Material (informational - no symbol, no Pass/Fail)
+            if hasattr(self.plate, 'material'):
+                t1 = ('Plate Material', '', str(self.plate.material), '')
+                self.report_check.append(t1)
+            elif hasattr(self, 'material'):
+                t1 = ('Plate Material', '', self.material, '')
+                self.report_check.append(t1)
+
+            # Plate Yield Strength (informational - no symbol, no Pass/Fail)
+            if hasattr(self.plate, 'fy'):
+                fyp = round(self.plate.fy, 2)
+                t1 = ('Plate Yield Strength (MPa)', '',
+                    NoEscape(f'$f_{{yp}} = {fyp}$ MPa'),
+                    '')
+                self.report_check.append(t1)
+
+            # Plate Ultimate Strength (informational - no symbol, no Pass/Fail)
+            if hasattr(self.plate, 'fu'):
+                fup = round(self.plate.fu, 2)
+                t1 = ('Plate Ultimate Strength (MPa)', '',
+                    NoEscape(f'$f_{{up}} = {fup}$ MPa'),
+                    '')
+                self.report_check.append(t1)
+
+            # Tension Yielding Capacity (informational - no symbol, no Pass/Fail)
+            if hasattr(self.plate, 'tension_yielding_capacity'):
+                Tdy_val = round(self.plate.tension_yielding_capacity / 1000, 2)
+                
+                if hasattr(self.plate, 'height') and hasattr(self.plate, 'thickness_provided'):
+                    Ag = self.plate.height * self.plate.thickness_provided
+                    fy = getattr(self.plate, 'fy', 250)
+                    gamma_m0 = 1.1
+                    
+                    t1 = ('Tension Yielding Capacity (kN)', '',
+                        NoEscape(f'$T_{{dy}} = \\dfrac{{A_g \\times f_y}}{{\\gamma_{{m0}}}} = \\dfrac{{{Ag} \\times {fy}}}{{10^3 \\times {gamma_m0}}} = {Tdy_val}$ kN [Ref. IS 800:2007, Cl. 6.2]'),
+                        '')
+                else:
+                    t1 = ('Tension Yielding Capacity (kN)', '',
+                        NoEscape(f'$T_{{dy}} = \\dfrac{{A_g \\times f_y}}{{\\gamma_{{m0}}}} = {Tdy_val}$ kN [Ref. IS 800:2007, Cl. 6.2]'),
+                        '')
+                self.report_check.append(t1)
+
+            # Block Shear Capacity (informational - no symbol, no Pass/Fail)
+            if hasattr(self.plate, 'block_shear_capacity'):
+                Tdb_val = round(self.plate.block_shear_capacity / 1000, 2)
+                t1 = ('Block Shear Capacity (kN)', '',
+                    NoEscape(f'$T_{{db}} = \\min\\left[\\dfrac{{A_{{vg}} f_y}}{{\\sqrt{{3}} \\gamma_{{m0}}}} + \\dfrac{{0.9 A_{{tn}} f_u}}{{\\gamma_{{m1}}}}, \\dfrac{{A_{{vn}} f_u}}{{\\sqrt{{3}} \\gamma_{{m1}}}} + \\dfrac{{A_{{tg}} f_y}}{{\\gamma_{{m0}}}}\\right] = {Tdb_val}$ kN [Ref. IS 800:2007, Cl. 6.4]'),
+                    '')
+                self.report_check.append(t1)
+            elif hasattr(self.plate, 'blockshear_capacity'):
+                Tdb_val = round(self.plate.blockshear_capacity / 1000, 2)
+                t1 = ('Block Shear Capacity (kN)', '',
+                    NoEscape(f'$T_{{db}} = \\min\\left[\\dfrac{{A_{{vg}} f_y}}{{\\sqrt{{3}} \\gamma_{{m0}}}} + \\dfrac{{0.9 A_{{tn}} f_u}}{{\\gamma_{{m1}}}}, \\dfrac{{A_{{vn}} f_u}}{{\\sqrt{{3}} \\gamma_{{m1}}}} + \\dfrac{{A_{{tg}} f_y}}{{\\gamma_{{m0}}}}\\right] = {Tdb_val}$ kN [Ref. IS 800:2007, Cl. 6.4]'),
+                    '')
+                self.report_check.append(t1)
+
+            # Design Tension Capacity (informational - no symbol, no Pass/Fail)
+            if hasattr(self, 'plate_tension_capacity'):
+                Td_val = round(self.plate_tension_capacity / 1000, 2)
+                
+                if hasattr(self.plate, 'tension_yielding_capacity'):
+                    Tdy = round(self.plate.tension_yielding_capacity / 1000, 2)
+                    if hasattr(self.plate, 'block_shear_capacity'):
+                        Tdb = round(self.plate.block_shear_capacity / 1000, 2)
+                    elif hasattr(self.plate, 'blockshear_capacity'):
+                        Tdb = round(self.plate.blockshear_capacity / 1000, 2)
+                    else:
+                        Tdb = Tdy
+                    
+                    t1 = ('Design Tension Capacity (kN)', '',
+                        NoEscape(f'$T_d = \\min(T_{{dy}}, T_{{db}}) = \\min({Tdy}, {Tdb}) = {Td_val}$ kN'),
+                        '')
+                else:
+                    t1 = ('Design Tension Capacity (kN)', '',
+                        NoEscape(f'$T_d = {Td_val}$ kN'),
+                        '')
+                self.report_check.append(t1)
+
+                # Plate Capacity Check (CONSTRAINT - HAS symbol and Pass/Fail)
+                P_applied = round(self.load.axial_force / 1000, 2)
+                plate_status = get_pass_fail(self.load.axial_force / 1000,
+                                            self.plate_tension_capacity / 1000, relation='leq')
+                t1 = ('Plate Capacity Check', NoEscape(r'$P \leq T_{d}$'),
+                    NoEscape(f'${P_applied} \\leq {Td_val}$'),
+                    plate_status)
+                self.report_check.append(t1)
+
+
         else:
             self.report_input = \
             {#KEY_MAIN_MODULE: self.mainmodule,
@@ -2948,11 +3145,11 @@ class Compression(Member):
                 KEY_DISP_SECSIZE:  str(self.sec_list),
 
                 # "Failed Section Details": self.report_column,
-                }  
+                }
             self.report_check = []
 
             t1 = ('Selected', 'All Members Failed', '|p{5cm}|p{2cm}|p{2cm}|p{2cm}|p{4cm}|')
-            self.report_check.append(t1) 
+            self.report_check.append(t1)
         
         Disp_2d_image = []
         Disp_3D_image = "/ResourceFiles/images/3d.png"
