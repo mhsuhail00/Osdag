@@ -1309,7 +1309,7 @@ class LapJointBolted(MomentConnection):
             lj_prov = Math(inline=True)
             lj_prov.append(NoEscape(r'\beta_{lj} = ' + f'{beta_lj:.2f}'))
             
-            self.report_check.append(["Long Joint Factor", '', lj_prov, ''])
+            self.report_check.append(["Long Joint Factor", lj_req, lj_prov, ''])
 
             l_g = plate1_thk_raw + plate2_thk_raw
             
@@ -1340,7 +1340,7 @@ class LapJointBolted(MomentConnection):
             lg_prov = Math(inline=True)
             lg_prov.append(NoEscape(r'\beta_{lg} = ' + f'{beta_lg:.2f}'))
             
-            self.report_check.append(["Large Grip Factor", '', lg_prov, ''])
+            self.report_check.append(["Large Grip Factor", lg_req, lg_prov, ''])
 
             if self.bolt.bolt_hole_type != "Standard":
                 hole_req = Math(inline=True)
