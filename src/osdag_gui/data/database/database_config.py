@@ -4,9 +4,9 @@ from osdag_core.Common import (KEY_DISP_FINPLATE, KEY_DISP_ENDPLATE, KEY_DISP_CL
                                KEY_DISP_BUTTJOINTWELDED, KEY_DISP_BASE_PLATE, KEY_DISP_TENSION_BOLTED, KEY_DISP_TENSION_WELDED, KEY_DISP_STRUT_WELDED_END_GUSSET,
                                KEY_DISP_STRUT_BOLTED_END_GUSSET, KEY_DISP_COMPRESSION_COLUMN, KEY_DISP_FLEXURE, KEY_DISP_FLEXURE2, KEY_DISP_FLEXURE4, KEY_DISP_PLATE_GIRDER_WELDED)
 from pathlib import Path
-from importlib.resources import files
+from osdag_gui.app_utils import get_user_data_dir
 
-SQLITE_FILE = files('osdag_gui.data.database')/ 'user_data.sqlite'
+SQLITE_FILE = Path(get_user_data_dir() / "database" / 'user_data.sqlite')
 
 PROJECT_TABLE = 'recent_projects'
 MODULE_TABLE = 'recent_modules'

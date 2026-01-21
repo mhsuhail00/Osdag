@@ -745,7 +745,7 @@ class HomeWidget(QWidget):
         target_pdf, _ = QFileDialog.getSaveFileName(
             self,
             "Save PDF Report As",
-            record[PROJECT_NAME],
+            get_documents_folder(),
             "PDF (*.pdf)"
         )
         if not target_pdf:
