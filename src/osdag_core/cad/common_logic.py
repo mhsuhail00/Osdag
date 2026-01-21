@@ -2315,7 +2315,12 @@ class CommonDesignLogic(object):
             block_w = block_dim  
             # Thickness = Fixed 250.0 mm (User Request: Prevent scaling with length)
             block_t = 250.0
-            beam_embed = 25.0         # Embed beam 25mm into block
+            
+            # User Request: Default embed 100mm, or 40% if length <= 100mm
+            if column_length <= 100.0:
+                 beam_embed = 0.40 * column_length
+            else:
+                 beam_embed = 100.0
             
             # Position: 
             # X: Centered [-w/2, w/2]
@@ -2336,7 +2341,7 @@ class CommonDesignLogic(object):
             # We will create hatching lines in the region BEHIND the support: [y_min - block_t, y_min]
             # This simulates the "Fixed Wall" extending backwards.
             
-            hatch_width = block_t # Arbitrary width for the hatching zone behind support
+            hatch_width = block_t / 2.0 # User Request: Hatch length = 0.5 * Thickness
             y_hatch_end = y_min
             y_hatch_start = y_min - hatch_width
             
@@ -2453,7 +2458,12 @@ class CommonDesignLogic(object):
             block_h = column_d * 2.5  
             block_w = column_B * 2.5  
             block_t = 250.0           # Total Thickness
-            beam_embed = 25.0         # Embed beam 25mm into block
+            
+            # User Request: Default embed 100mm, or 40% if length <= 100mm
+            if column_length <= 100.0:
+                 beam_embed = 0.40 * column_length
+            else:
+                 beam_embed = 100.0
             
             # Position: 
             # X: Centered [-w/2, w/2]
@@ -2473,7 +2483,7 @@ class CommonDesignLogic(object):
             
             # --- Hatching Lines (Behind Support) ---
             # Region: [y_min - block_t, y_min]
-            hatch_width = block_t
+            hatch_width = block_t / 2.0
             y_hatch_end = y_min
             y_hatch_start = y_min - hatch_width
             
