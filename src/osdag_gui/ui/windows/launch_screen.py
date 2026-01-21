@@ -37,8 +37,15 @@ class OsdagLaunchScreen(object):
         from pathlib import Path
         # Use module's location to find resources - works on Linux/Windows/Mac
         # pathlib automatically handles path separators for each OS
-        module_dir = Path(__file__).resolve().parent.parent.parent  # Goes up to osdag_gui/
-        base_path = module_dir / "resources" / "animation"
+        app = QApplication.instance()
+        self.app_dir = app.APP_DIR                  # Goes up to osdag_gui/
+        self.user_data_dir = app.USER_DATA_DIR
+        self.user_temp_dir = app.USER_TEMP_DIR
+        # module_dir = Path(__file__).resolve().parent.parent.parent  # Goes up to osdag_gui/
+        base_path = Path(self.app_dir) / "resources" / "animation"
+
+        
+
         
         if base_path.exists():
             animation_path = str(base_path / "{:04d}.png")

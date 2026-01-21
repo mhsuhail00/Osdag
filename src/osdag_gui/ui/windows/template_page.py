@@ -38,9 +38,13 @@ class CustomWindow(QWidget):
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.parent = parent
         self.backend = backend()
-
+        
         app = QApplication.instance()
         self.theme = app.theme_manager
+        self.app_dir = app.APP_DIR
+        self.user_data_dir = app.USER_DATA_DIR
+        self.user_temp_dir = app.USER_TEMP_DIR
+        self.latex_exe = app.LATEX_EXE
 
         # Update recent Modules
         insert_recent_module(self.backend.module_name())
@@ -56,7 +60,7 @@ class CustomWindow(QWidget):
         self.prev_inputs = {}
         self.input_dock_inputs = {}
         self.design_inputs = {}
-        self.folder = ' '
+        self.folder = str(Path.home())
         self.display_mode = 'Normal'
         self._did_apply_initial_sizes = False
         self.ui_loaded = False
@@ -535,7 +539,7 @@ class CustomWindow(QWidget):
         # Docking icons Parent class
         class ClickableSvgWidget(QSvgWidget):
             clicked = Signal()  # Define a custom clicked signal
-            def __init__(self, parent=None):
+            def __init__(self, parent=self):
                 super().__init__(parent)
                 self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -1655,8 +1659,8 @@ class CustomWindow(QWidget):
 
             # print('[INFO] Output title changed: ',self.output_dock.output_title_change(main))
             self.output_dock.output_title_change(main)
-            last_design_folder = os.path.join('ResourceFiles', 'last_designs')
-            # print('[INFO] last design: ',last_design_folder)
+            user_data_dir = QApplication.instance().USER_DATA_DIR
+            last_design_folder = os.path.join(user_data_dir, 'last_designs')
             if not os.path.isdir(last_design_folder):
                 # print('[INFO] not os.path.isdir')
                 os.makedirs(last_design_folder)
@@ -1758,7 +1762,8 @@ class CustomWindow(QWidget):
                         checkbox_widget.setChecked(False)
                         checkbox_widget.blockSignals(False)
 
-                fName = str('./ResourceFiles/images/3d.png')
+                fName = os.path.join(str(self.user_temp_dir),"images","3d_model.png")
+                # fName = str('./ResourceFiles/images/3d.png')
                 file_extension = fName.split(".")[-1]
             else:
                 # Hide cad component checkboxes

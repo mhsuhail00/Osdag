@@ -165,6 +165,10 @@ class MainWindow(QMainWindow):
 
         app = QApplication.instance()
         self.theme = app.theme_manager
+        self.app_dir = app.APP_DIR
+        self.user_data_dir = app.USER_DATA_DIR
+        self.user_temp_dir = app.USER_TEMP_DIR
+        self.latex_exe = app.LATEX_EXE
 
         screen_width = screen_size.width()
         screen_height = screen_size.height()
@@ -779,7 +783,8 @@ class MainWindow(QMainWindow):
         template_page = CustomWindow(title, backend_class, id, parent=self)
 
         # Load the last Design Inputs-start------------------------------------
-        last_design_folder = os.path.join('ResourceFiles', 'last_designs')
+        
+        last_design_folder = os.path.join(self.user_data_dir, 'last_designs')
         last_design_file = str(template_page.backend.module_name()).replace(' ', '') + ".osi"
         last_design_file = os.path.join(last_design_folder, last_design_file)
         last_design_dictionary = {}
@@ -978,7 +983,7 @@ class MainWindow(QMainWindow):
     # If osi_path=None -> it triggers Load Osi else trigger open recent project
     def common_osi_load(self, osi_path=None, id=None):
         if osi_path is None:
-            osi_path, _ = QFileDialog.getOpenFileName(self, "Open Design", os.path.join(str(' ')),
+            osi_path, _ = QFileDialog.getOpenFileName(self, "Open Design", os.path.join(get_documents_folder()),
                                                   "InputFiles(*.osi)")
             
         else:
@@ -990,7 +995,7 @@ class MainWindow(QMainWindow):
                     buttons=["Locate Osi", "Remove Record"]
                 ).exec()
                 if result == "Locate Osi":
-                    file_dialog_path, _ = QFileDialog.getOpenFileName(self, "Locate Osi File", os.path.expanduser("~"), "InputFiles(*.osi)")
+                    file_dialog_path, _ = QFileDialog.getOpenFileName(self, "Locate Osi File", Path.home(), "InputFiles(*.osi)")
                     if file_dialog_path and id is not None:
                         osi_path = file_dialog_path
                         new_name = Path(osi_path).stem
@@ -1008,7 +1013,7 @@ class MainWindow(QMainWindow):
                             delete_project_record(id)
                             # Also delete the latex files for this project
                             import shutil
-                            report_folder = f"osdag_gui/data/reports/file_{id}"
+                            report_folder = f"{str(self.user_data_dir)}/reports/file_{id}"
                             try:
                                 shutil.rmtree(report_folder)
                             except FileNotFoundError:

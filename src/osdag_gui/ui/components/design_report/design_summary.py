@@ -153,7 +153,7 @@ class DesignSummaryWidget(QWidget):
         if hasattr(self.parent, 'folder'):
             folder = self.parent.folder
         else:
-            folder = ""
+            folder = os.path.join(get_documents_folder())
             
         filename, _ = QFileDialog.getOpenFileName(
             self, 'Open Profile', 

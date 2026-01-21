@@ -54,6 +54,9 @@ class OutputDock(QWidget):
         # NOTE: Do NOT use WA_DeleteOnClose - it causes heap corruption (use-after-free)
         # when processEvents() is called during OpenGL rendering. Parent manages lifecycle.
         self.parent = parent
+        self.app_dir = self.parent.app_dir
+        self.user_temp_dir = self.parent.user_temp_dir
+        self.user_data_dir = self.parent.user_data_dir
         # Already an Object created in template_page.py
         self.backend = backend
         self.output_widget = None
@@ -293,7 +296,12 @@ class OutputDock(QWidget):
                 # print("[INFO] Start!")
                 off_display, _, _, _ = init_display_off_screen(backend_str=CAD_BACKEND)
                 # print(' [INFO] off_display', off_display)
-                
+
+                # Ensure images directory exists even if image generation fails
+                image_folder_path = str(os.path.join(self.user_data_dir, "images"))
+                if not os.path.exists(image_folder_path):
+                    os.makedirs(image_folder_path)
+
                 # Check if commLogicObj exists and is properly initialized
                 if hasattr(self.parent, 'commLogicObj') and self.parent.commLogicObj is not None:
                     # Store original display settings
@@ -304,9 +312,6 @@ class OutputDock(QWidget):
                     self.parent.commLogicObj.display = off_display
                     self.parent.commLogicObj.display_3DModel("Model", "gradient_bg")
 
-                    image_folder_path = "./ResourceFiles/images"
-                    if not os.path.exists(image_folder_path):
-                        os.makedirs(image_folder_path)
 
                     off_display.set_bg_gradient_color([255,255,255],[255,255,255])
                     off_display.ExportToImage(os.path.join(image_folder_path, '3d.png'))
@@ -326,19 +331,20 @@ class OutputDock(QWidget):
                         self.parent.commLogicObj.component = original_component
                         
                     # print("[INFO] 3D images generated successfully")
-                else:
-                    # print("[INFO] commLogicObj not available - skipping 3D image generation")
-                    # Create default/placeholder images directory
-                    image_folder_path = "./ResourceFiles/images"
-                    if not os.path.exists(image_folder_path):
-                        os.makedirs(image_folder_path)
+                # else:
+                #     # print("[INFO] commLogicObj not available - skipping 3D image generation")
+                #     # Create default/placeholder images directory
+                #     image_folder_path = os.path.join(self.user_data_dir, "images")
+                #     if not os.path.exists(image_folder_path):
+                #         os.makedirs(image_folder_path)
                     
             except Exception as e:
                 print(f"[ERROR] Error generating 3D images: {str(e)}")
-                # Ensure images directory exists even if image generation fails
-                image_folder_path = "./ResourceFiles/images"
+                # Ensure images directory exists even if image generation fails 
+                image_folder_path = str(os.path.join(self.user_data_dir, "images"))
                 if not os.path.exists(image_folder_path):
                     os.makedirs(image_folder_path)
+                
             
         # Open Unified report popup dialog
         self.design_report_dialog = DesignReportDialog(
@@ -361,6 +367,11 @@ class OutputDock(QWidget):
             try:
                 cad_pngs = []
                 off_display, _, _, _ = init_display_off_screen(backend_str=CAD_BACKEND)
+
+                # Ensure images directory exists even if image generation fails
+                image_folder_path = os.path.join(self.user_data_dir, "images")
+                if not os.path.exists(image_folder_path):
+                    os.makedirs(image_folder_path)
                 
                 # Check if commLogicObj exists and is properly initialized
                 if hasattr(self.parent, 'commLogicObj') and self.parent.commLogicObj is not None:
@@ -372,9 +383,6 @@ class OutputDock(QWidget):
                     self.parent.commLogicObj.display = off_display
                     self.parent.commLogicObj.display_3DModel("Model", "gradient_bg")
 
-                    image_folder_path = "./ResourceFiles/images"
-                    if not os.path.exists(image_folder_path):
-                        os.makedirs(image_folder_path)
 
                     off_display.set_bg_gradient_color([255,255,255],[255,255,255])
                     off_display.ExportToImage(os.path.join(image_folder_path, '3d.png'))
@@ -401,14 +409,14 @@ class OutputDock(QWidget):
                 else:
                     print("[INFO] commLogicObj not available - skipping 3D image generation")
                     # Create default/placeholder images directory
-                    image_folder_path = "./ResourceFiles/images"
+                    image_folder_path = os.path.join(self.user_data_dir, "images")
                     if not os.path.exists(image_folder_path):
                         os.makedirs(image_folder_path)
                     
             except Exception as e:
                 print(f"[ERROR] Error generating 3D images: {str(e)}")
                 # Ensure images directory exists even if image generation fails
-                image_folder_path = "./ResourceFiles/images"
+                image_folder_path = os.path.join(self.user_data_dir, "images")
                 if not os.path.exists(image_folder_path):
                     os.makedirs(image_folder_path)
 
@@ -426,10 +434,10 @@ class OutputDock(QWidget):
         input_summary["AdditionalComments"] = ''
         input_summary["Client"] = ''
 
-        import tempfile
         # CREATE TEMPORARY WORKSPACE - No user prompt needed
-        temp_dir = tempfile.mkdtemp(prefix='osdag_report_')
+        temp_dir = os.path.join(self.user_temp_dir,"reports")
         filename = os.path.join(temp_dir, "report.tex")
+
 
         fname_no_ext = filename.split(".")[0]
         input_summary['filename'] = fname_no_ext
@@ -444,10 +452,10 @@ class OutputDock(QWidget):
     def save_to_database(self, record: dict):
         imgs, tex_path = self.generate_tex()
         import os
-        report_path = "osdag_gui.data.reports"
+        report_path = os.path.join(self.user_data_dir, "reports")
         # Ensure the 'reports' directory exists
-        if not os.path.exists("./osdag_gui/data/reports"):
-            os.makedirs("./osdag_gui/data/reports")
+        if not os.path.exists(report_path):
+            os.makedirs(report_path)
         record[REPORT_FILE_PATH] = report_path
 
         id = insert_recent_project(record)
@@ -471,7 +479,7 @@ class OutputDock(QWidget):
 
         # Construct the target directory path using an absolute path
         # Place reports in a real directory, not a Python module path
-        base_report_dir = os.path.join(os.getcwd(), "osdag_gui", "data", "reports")
+        base_report_dir = os.path.join(self.user_data_dir, "reports")
         target_dir = os.path.join(base_report_dir, f"file_{id}")
         pathlib.Path(target_dir).mkdir(parents=True, exist_ok=True)
 

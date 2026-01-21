@@ -11,6 +11,8 @@ Startup sequence:
 # =============================================================================
 # CRITICAL: Import and run safety protocols BEFORE any PySide6/Qt imports
 # =============================================================================
+from importlib.metadata import files
+import os
 from osdag_gui.OS_safety_protocols import setup_environment, ensure_safe_startup
 
 setup_environment()
@@ -26,11 +28,15 @@ from PySide6.QtGui import QFontDatabase, QFont, QIcon
 # Disable native file dialogs globally to prevent OpenGL context conflicts
 # This is critical for Linux systems with Intel/Mesa graphics drivers
 QApplication.setAttribute(Qt.ApplicationAttribute.AA_DontUseNativeDialogs, True)
-from osdag_core.utils.internet_connectivity import InternetConnectivity
 from osdag_gui.ui.windows.launch_screen import OsdagLaunchScreen
 from osdag_gui.data.database.database_config import refactor_database, create_user_database
 from osdag_gui.ui.utils.theme_manager import ThemeManager
+from osdag_gui.app_utils import get_user_data_dir, get_user_temp_dir
+
+from osdag_core.utils.internet_connectivity import InternetConnectivity
 from osdag_core.cli import run_module
+from osdag_core.design_report.reportGenerator_latex import get_latex_executable
+
 import osdag_gui.resources.resources_rc
 import sys, click
 
@@ -107,9 +113,8 @@ class LoadingThread(QThread):
                 with open(sqlpath, 'r', encoding='utf-8') as sql_file:
                     sql_content = sql_file.read()
                 
-                conn = sqlite3.connect(target_path)
-                conn.executescript(sql_content)
-                conn.close()
+                with sqlite3.connect(target_path) as conn:
+                    conn.executescript(sql_content)
                 
                 print(f"[INFO] Database {'created' if needs_creation else 'updated'} using Python sqlite3")
                 
@@ -170,6 +175,44 @@ class LaunchScreenPopup(QMainWindow):
         if self.on_finish:
             self.on_finish()
 
+
+def get_app_dir():
+    """
+    Return the absolute path to the application's root directory.
+
+    This function is designed to work correctly in both normal (source-based)
+    execution and in "frozen" executables created by tools like PyInstaller.
+
+    Behavior:
+
+    - When running from source (normal Python execution):
+        The function returns the directory where this file physically resides.
+        This corresponds to the path to osdag_gui.
+
+    - When running as a frozen executable:
+        The function returns the directory containing the executable file
+        (sys.executable), because the original .py files no longer exist on disk.
+
+    Important notes:
+
+    - The value of __file__ always refers to the file in which this function
+      is defined, even when the function is imported and called from other
+      modules. This guarantees a single, consistent definition of "app root"
+      across the entire application.
+
+    - This function has no side effects. It only computes a path and does not
+      modify the process state. Changing the working directory should be done
+      explicitly by the caller (typically in the __main__ entry point).
+
+    Returns:
+        str: Absolute path to the application root directory.
+    """
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    else:
+        return os.path.dirname(os.path.abspath(__file__))
+   
+
 def GUI():
 
     app = QApplication(sys.argv)
@@ -182,8 +225,21 @@ def GUI():
     else:
         print("[WARNING] Failed to load Ubuntu Sans font from resources")
 
+# ----------------------------------------------------------------------------------------------------
+    # App specific attributes
+    # import anywhere : QApplication.instance().attribute_name
     app.theme_manager = ThemeManager(app)
     app.theme_manager.load_theme(app.theme_manager.current_theme)
+
+    
+    app.APP_DIR = get_app_dir()
+    app.USER_DATA_DIR = get_user_data_dir()
+    app.USER_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    app.USER_TEMP_DIR = get_user_temp_dir()
+    app.USER_TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    app.LATEX_EXE = get_latex_executable()
+
+# ----------------------------------------------------------------------------------------------------
 
     if app.theme_manager.is_light():
         file = QFile(":/themes/lightstyle.qss")
@@ -283,4 +339,15 @@ def run(input_path, op_type, output_path):
 
 
 if __name__ == "__main__":
+    """
+    Application bootstrap section.
+
+    This block is executed only when this file is run as the main program,
+    not when it is imported as a module.
+
+    The working directory is explicitly set to the application root (osdag_gui) so that
+    all relative file paths used anywhere in the program resolve in a
+    deterministic and installation-independent manner.
+    """
+    os.chdir(get_app_dir())
     main()

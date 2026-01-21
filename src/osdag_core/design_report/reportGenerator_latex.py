@@ -428,19 +428,26 @@ class CreateLatex(Document):
 
         if does_design_exist and sys.platform != 'darwin' and Disp_3d_image != '':
             doc.append(NewPage())
-            Disp_top_image = "/ResourceFiles/images/top.png"
-            Disp_side_image = "/ResourceFiles/images/side.png"
-            Disp_front_image = "/ResourceFiles/images/front.png"
-            view_3dimg_path = rel_path + Disp_3d_image
-            view_topimg_path = rel_path + Disp_top_image
-            view_sideimg_path = rel_path + Disp_side_image
-            view_frontimg_path = rel_path + Disp_front_image
+
+            # appdata directory
+            if sys.platform.startswith("win"):
+                self.user_data_dir = os.environ.get("APPDATA") or os.environ.get("LOCALAPPDATA")
+            elif sys.platform == "darwin":
+                self.user_data_dir = os.path.expanduser("~/Library/Application Support")
+            else:  # Linux / Unix
+                self.user_data_dir = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
+            self.user_data_dir = os.path.join(self.user_data_dir, "Osdag")
+            Disp_2d_image = []
+            view_3dimg_path = os.path.join(self.user_data_dir, "images/3d.png").replace("\\", "/")
+            view_topimg_path = os.path.join(self.user_data_dir, "images/top.png").replace("\\", "/")
+            view_sideimg_path = os.path.join(self.user_data_dir, "images/side.png").replace("\\", "/")
+            view_frontimg_path = os.path.join(self.user_data_dir, "images/front.png").replace("\\", "/")
             with doc.create(Section('3D Views')):
                 with doc.create(Tabularx(r'|>{\centering}X|>{\centering\arraybackslash}X|', row_height=1.2)) as table:
-                    view_3dimg_path = rel_path + Disp_3d_image
-                    view_topimg_path = rel_path + Disp_top_image
-                    view_sideimg_path = rel_path + Disp_side_image
-                    view_frontimg_path = rel_path + Disp_front_image
+                    # view_3dimg_path = rel_path + Disp_3d_image
+                    # view_topimg_path = rel_path + Disp_top_image
+                    # view_sideimg_path = rel_path + Disp_side_image
+                    # view_frontimg_path = rel_path + Disp_front_image
                     table.add_hline()
                     table.add_row([StandAloneGraphic(image_options="height=4cm",filename=view_3dimg_path),
                                   StandAloneGraphic(image_options="height=4cm",filename=view_topimg_path)])

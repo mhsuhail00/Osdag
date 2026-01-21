@@ -26,17 +26,23 @@ import re
 # ==============================================================================
 # OSDAG IMPORTS - Try to import LaTeX generator
 # ==============================================================================
-
-try:
-    from osdag_core.design_report.reportGenerator_latex import CreateLatex
-    from osdag_core.Common import PDFLATEX
+from osdag_core.design_report.reportGenerator_latex import get_latex_executable
+latex_exec = get_latex_executable()
+if not latex_exec:
+    CREATELATEX_AVAILABLE = False
+else:
     CREATELATEX_AVAILABLE = True
-    # print("[INFO]: CreateLatex successfully imported")
-except ImportError:
-    CreateLatex = None
-    CREATELATEX_AVAILABLE = False
-    print("[WARNING]: CreateLatex not available")
-    CREATELATEX_AVAILABLE = False
+
+# try:
+#     from osdag_core.design_report.reportGenerator_latex import get_latex_executable
+#     from osdag_core.Common import PDFLATEX
+#     CREATELATEX_AVAILABLE = True if 
+#     # print("[INFO]: CreateLatex successfully imported")
+# except ImportError:
+#     CreateLatex = None
+#     CREATELATEX_AVAILABLE = False
+#     print("[WARNING]: CreateLatex not available")
+#     CREATELATEX_AVAILABLE = False
 
 # ==============================================================================
 # IMPORTS - PySide6 widgets and core functionality

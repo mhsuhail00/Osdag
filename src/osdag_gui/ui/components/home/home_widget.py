@@ -18,6 +18,7 @@ from osdag_gui.ui.components.dialogs.custom_messagebox import CustomMessageBox, 
 from osdag_gui.ui.components.home.search_overlay import SearchOverlay
 from osdag_gui.data.database.database_config import *
 from osdag_gui.data.ui_data import Data
+from osdag_core.Common import get_documents_folder
 
 # --- SVG Widget with Theme Support ---
 class ThemedSvgWidget(QSvgWidget):
@@ -646,7 +647,7 @@ class HomeWidget(QWidget):
         save_path, _ = QFileDialog.getSaveFileName(
             self,
             "Save OSI File",
-            default_name,
+            os.path.join(str(get_documents_folder()), default_name),
             "Osdag Project Files (*.osi);;All Files (*)"
         )
         if save_path:
@@ -690,20 +691,24 @@ class HomeWidget(QWidget):
             super().__init__(parent)
             self.record = record
             self.target_pdf = target_pdf
+            app = QApplication.instance()
+            self.latex_exec = app.LATEX_EXE
+            self.user_temp_dir = app.USER_TEMP_DIR
+            self.user_data_dir = app.USER_DATA_DIR
 
         def run(self):
             try:
                 # 1. Check if tex exist
-                tex_path = os.path.join("osdag_gui", "data", "reports", f"file_{self.record[ID]}", "report.tex")
+                tex_path = os.path.join(self.user_data_dir, "reports", f"file_{self.record[ID]}", "report.tex")
                 if not os.path.isfile(tex_path):
                     self.error.emit(f"LaTeX file not found for this project:\n{tex_path}")
                     return
 
                 # 2. Copy images
-                base_dir = os.path.join("ResourceFiles", "images")
+                base_dir = os.path.join(self.user_data_dir, "images")
                 os.makedirs(base_dir, exist_ok=True)
 
-                report_dir = os.path.join("osdag_gui", "data", "reports", f"file_{self.record[ID]}")
+                report_dir = os.path.join(self.user_data_dir, "reports", f"file_{self.record[ID]}")
                 required_images = ["3d.png", "front.png", "top.png", "side.png"]
 
                 for img in required_images:
@@ -713,8 +718,7 @@ class HomeWidget(QWidget):
                         shutil.copy2(src, dst)
 
                 # 3. Run pdflatex
-                from osdag_core.design_report.reportGenerator_latex import get_latex_executable
-                latex_exec = get_latex_executable()
+                latex_exec = self.latex_exec
                 result = subprocess.run(
                     [latex_exec, "-interaction=nonstopmode", os.path.basename(tex_path)],
                     cwd=os.path.dirname(tex_path),

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
     QComboBox, QScrollArea, QLabel, QLineEdit, QSizePolicy, QTabWidget
@@ -1160,7 +1162,7 @@ class Window(QDialog):
             return False
 
     def import_section(self, tab_name):
-        fileName, _ = QFileDialog.getOpenFileName(QFileDialog(), "Open File", os.getcwd(),
+        fileName, _ = QFileDialog.getOpenFileName(QFileDialog(), "Open File", str(Path.home()),
                                                   "SectionDetails(*.xlsx)")
         if not fileName:
             return

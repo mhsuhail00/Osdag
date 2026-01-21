@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QDialog, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
     QStackedWidget, QLabel, QGridLayout, QLineEdit, QTextEdit,
     QFormLayout, QSizeGrip, QTreeWidget, QTreeWidgetItem,
-    QFileDialog, QSizePolicy
+    QFileDialog, QSizePolicy, QApplication
 )
 from PySide6.QtCore import Qt, Signal, QCoreApplication
 from PySide6.QtGui import QIcon, QCursor
@@ -16,17 +16,14 @@ from osdag_gui.ui.components.dialogs.custom_messagebox import CustomMessageBox, 
 
 from osdag_gui.ui.components.design_report.design_summary import DesignSummaryWidget
 from osdag_gui.ui.components.design_report.report_customization import CustomizationWidget
+from osdag_core.Common import get_documents_folder
 
 import os, sys
 import tempfile
 import shutil
 import subprocess
 
-try:
-    from osdag_core.Common import PDFLATEX, get_documents_folder
-except ImportError:
-    # using systems pdflatex
-    PDFLATEX = 'pdflatex'
+PDFLATEX = QApplication.instance().LATEX_EXE
 
 class DesignReportDialog(QDialog):
     """Main dialog containing both widgets with navigation"""
@@ -125,8 +122,12 @@ class DesignReportDialog(QDialog):
         # Get inputs from summary widget
         input_summary = self.summary_widget.get_inputs()
         
-        # Create temp directory
-        self.temp_dir = tempfile.mkdtemp(prefix='osdag_report_')
+        # Temp directory
+        temp_dir = QApplication.instance().USER_TEMP_DIR
+        self.temp_dir = os.path.join(temp_dir, "reports")
+        if os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
+        os.makedirs(self.temp_dir, exist_ok=True)
         filename = os.path.join(self.temp_dir, "report.tex")
 
         # print(f"INFO: Temp dir initialized, {self.temp_dir}")
