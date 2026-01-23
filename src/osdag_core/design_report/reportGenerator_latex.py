@@ -1,5 +1,4 @@
-import os
-import shutil
+import os, shutil
 import sys
 import time
 import datetime
@@ -19,6 +18,8 @@ from pylatex import Document, PageStyle, Head, MiniPage, Foot, LargeText, Medium
 from importlib.resources import files
 from ..Report_functions import *
 from ..utils.common.common_calculation import *
+from pylatex.utils import NoEscape
+
 # from ..Common import *
 # from ..utils.common import component
 
@@ -28,6 +29,8 @@ class CreateLatex(Document):
         super().__init__()
 
     def save_latex(self, uiObj, Design_Check, reportsummary, filename, rel_path, Disp_2d_image, Disp_3d_image, module=''):
+        configure_latex_runtime_windows()
+
         companyname = str(reportsummary["ProfileSummary"]['CompanyName'])
         companylogo = str(reportsummary["ProfileSummary"]['CompanyLogo'])
         groupteamname = str(reportsummary["ProfileSummary"]['Group/TeamName'])
@@ -39,13 +42,14 @@ class CreateLatex(Document):
 
         does_design_exist = reportsummary['does_design_exist']
         pkg_images = files("osdag_core.data.ResourceFiles.images")
+
         imgpath_osdagheader = str(pkg_images.joinpath("Osdag_header_report.png")).replace("\\", "/")
         # Add document header
         geometry_options = {"top": "5cm", "hmargin": "2cm", "headheight": "100pt", "footskip": "100pt", "bottom":"5cm"}
         doc = Document(geometry_options=geometry_options, indent=False)
-        doc.packages.append(Package('amsmath'))
-        doc.packages.append(Package('graphicx'))
-        doc.packages.append(Package('needspace'))
+        doc.packages.append(Package('amsmath', options=NoEscape('')))
+        doc.packages.append(Package('graphicx', options=NoEscape('')))
+        doc.packages.append(Package('needspace', options=NoEscape('')))
         doc.append(pyl.Command('fontsize', arguments= [8,12]))
         doc.append(pyl.Command('selectfont'))
 
@@ -60,7 +64,7 @@ class CreateLatex(Document):
             with header.create(Tabularx('|l|p{4cm}|l|X|')) as table:
                 table.add_hline()
                 # MultiColumn(4)
-                table.add_row((MultiColumn(2, align='|c|', data=('' if companylogo is '' else StandAloneGraphic(image_options="height=0.95cm",
+                table.add_row((MultiColumn(2, align='|c|', data=('' if companylogo == '' else StandAloneGraphic(image_options="height=0.95cm",
                                                                                                                filename=companylogo))),
                                MultiColumn(2, align='|c|', data=['Created with',StandAloneGraphic(image_options="width=4.0cm,height=1cm",
                                                                                                   filename=imgpath_osdagheader)]),))
@@ -119,7 +123,10 @@ class CreateLatex(Document):
                             # merge_rows = int(round_up(len(sectiondetails),2)/2 + 2)
                                 merge_rows = int((len(sectiondetails)/2)) +2
                             else:
-                                merge_rows = round_up((len(sectiondetails)/2),2)
+                                if len(sectiondetails) < 5:
+                                    merge_rows = len(sectiondetails) - 1
+                                else:
+                                    merge_rows = int(len(sectiondetails)/2) + 2
                             if (len(sectiondetails))% 2 == 0:
                                 sectiondetails['']=''
 
@@ -464,7 +471,8 @@ class CreateLatex(Document):
             view_topimg_path = rel_path + Disp_top_image
             view_sideimg_path = rel_path + Disp_side_image
             view_frontimg_path = rel_path + Disp_front_image
-            with doc.create(Section('3D Views')):
+            with doc.create(Section('Views')):
+                doc.append(pyl.Command('setlength', arguments=[NoEscape(r'\arrayrulewidth'), NoEscape(r'1pt')]))
                 with doc.create(Tabularx(r'|>{\centering}X|>{\centering\arraybackslash}X|', row_height=1.1)) as table:
                     view_3dimg_path = rel_path + Disp_3d_image
                     view_topimg_path = rel_path + Disp_top_image
@@ -493,7 +501,8 @@ class CreateLatex(Document):
             view_topimg_path = imgpath_broken
             view_sideimg_path = imgpath_broken
             view_frontimg_path = imgpath_broken
-            with doc.create(Section('3D Views')):
+            with doc.create(Section('Views')):
+                doc.append(pyl.Command('setlength', arguments=[NoEscape(r'\arrayrulewidth'), NoEscape(r'1pt')]))
                 with doc.create(Tabularx(r'|>{\centering}X|>{\centering\arraybackslash}X|', row_height=1.1)) as table:
                     view_3dimg_path = imgpath_broken
                     view_topimg_path = imgpath_broken
@@ -523,55 +532,8 @@ class CreateLatex(Document):
                     continue
                 doc.append(TextColor(colour,'\n'+msg))
         try:
-            print(f"Attempting PDF generation...")
-            
-            # **CRITICAL FIX**: Use proper file path handling
-            full_filename = os.path.join(rel_path, filename)
-            doc.generate_pdf(full_filename, compiler='pdflatex', clean_tex=False)
-            
-            # Check if PDF was created in the correct location
-            pdf_path = f"{full_filename}.pdf"
-            if os.path.exists(pdf_path):
-                file_size = os.path.getsize(pdf_path)
-                print(f"SUCCESS: PDF generated ({file_size} bytes)")
-                return True
-            else:
-                print("ERROR: PDF not found")
-                
-                # **DEBUG**: Check if PDF was created in wrong location
-                wrong_pdf_path = f"{filename}.pdf"
-                if os.path.exists(wrong_pdf_path):
-                    print(f"WARNING: PDF was created in wrong location: {wrong_pdf_path}")
-                    # Move it to correct location
-                    try:
-                        import shutil
-                        shutil.move(wrong_pdf_path, pdf_path)
-                        print(f"SUCCESS: PDF moved to correct location: {pdf_path}")
-                        return True
-                    except Exception as move_error:
-                        print(f"ERROR: Could not move PDF: {move_error}")
-                
-                return False
-                
-        except Exception as e:
-            print(f"PDF generation error: {e}")
-            
-            # **ENHANCED ERROR HANDLING**: Try multiple paths
-            possible_paths = [
-                f"{os.path.join(rel_path, filename)}.pdf",
-                f"{filename}.pdf",
-                os.path.join(rel_path, f"{filename}.pdf")
-            ]
-            
-            for path in possible_paths:
-                if os.path.exists(path):
-                    file_size = os.path.getsize(path)
-                    if file_size > 1000:
-                        print(f"PDF found at alternative location: {path} ({file_size} bytes)")
-                        return True
-            
-            return False
-
+            latex_executable = get_latex_executable()
+            doc.generate_pdf(filename, compiler=latex_executable, clean_tex = False)
         except Exception as e:
             pass
             

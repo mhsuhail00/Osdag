@@ -1027,8 +1027,9 @@ class PlateGirderWelded(Member):
         self.shear_type = None
         self.support_type = design_dictionary[KEY_DESIGN_TYPE_FLEXURE]
         self.loading_condition = design_dictionary[KEY_LOAD]
-        self.torsional_res = design_dictionary[KEY_TORSIONAL_RES]
-        self.warping = design_dictionary[KEY_WARPING_RES]
+        self.torsional_restraint = design_dictionary[KEY_TORSIONAL_RES]
+        self.warping_restraint = design_dictionary[KEY_WARPING_RES]
+        self.warping = self.warping_restraint
         self.length = float(design_dictionary[KEY_LENGTH])
 
         # Calculate effective length for lateral-torsional buckling
