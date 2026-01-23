@@ -11,13 +11,8 @@ from importlib.resources import files
 from pathlib import Path
 import platform
 
-# # Cross-platform pdflatex configuration
-# if platform.system() == "Windows":
-#     PDFLATEX = files("osdag_core.data.ResourceFiles.osdag-latex-env.bin.windows").joinpath("pdflatex.exe")
-# else:
-#     # On Linux/macOS, use system pdflatex (must be installed via texlive)
-#     PDFLATEX = "pdflatex"
-
+PATH_TO_DATABASE = files("osdag_core.data.ResourceFiles.Database").joinpath("Intg_osdag.sqlite")
+PDFLATEX = "pdflatex"
 
 import sqlite3
 

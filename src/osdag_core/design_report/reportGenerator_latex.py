@@ -123,10 +123,14 @@ class CreateLatex(Document):
                             # merge_rows = int(round_up(len(sectiondetails),2)/2 + 2)
                                 merge_rows = int((len(sectiondetails)/2)) +2
                             else:
+<<<<<<< HEAD
                                 if len(sectiondetails) < 5:
                                     merge_rows = len(sectiondetails) - 1
                                 else:
                                     merge_rows = int(len(sectiondetails)/2) + 2
+=======
+                                merge_rows = round_up((len(sectiondetails)/2),2)
+>>>>>>> suhail/merge
                             if (len(sectiondetails))% 2 == 0:
                                 sectiondetails['']=''
 
@@ -471,8 +475,12 @@ class CreateLatex(Document):
             view_topimg_path = rel_path + Disp_top_image
             view_sideimg_path = rel_path + Disp_side_image
             view_frontimg_path = rel_path + Disp_front_image
+<<<<<<< HEAD
             with doc.create(Section('Views')):
                 doc.append(pyl.Command('setlength', arguments=[NoEscape(r'\arrayrulewidth'), NoEscape(r'1pt')]))
+=======
+            with doc.create(Section('3D Views')):
+>>>>>>> suhail/merge
                 with doc.create(Tabularx(r'|>{\centering}X|>{\centering\arraybackslash}X|', row_height=1.1)) as table:
                     view_3dimg_path = rel_path + Disp_3d_image
                     view_topimg_path = rel_path + Disp_top_image
@@ -501,8 +509,12 @@ class CreateLatex(Document):
             view_topimg_path = imgpath_broken
             view_sideimg_path = imgpath_broken
             view_frontimg_path = imgpath_broken
+<<<<<<< HEAD
             with doc.create(Section('Views')):
                 doc.append(pyl.Command('setlength', arguments=[NoEscape(r'\arrayrulewidth'), NoEscape(r'1pt')]))
+=======
+            with doc.create(Section('3D Views')):
+>>>>>>> suhail/merge
                 with doc.create(Tabularx(r'|>{\centering}X|>{\centering\arraybackslash}X|', row_height=1.1)) as table:
                     view_3dimg_path = imgpath_broken
                     view_topimg_path = imgpath_broken
@@ -537,6 +549,28 @@ class CreateLatex(Document):
         except Exception as e:
             pass
             
+<<<<<<< HEAD
+=======
+            # **ENHANCED ERROR HANDLING**: Try multiple paths
+            possible_paths = [
+                f"{os.path.join(rel_path, filename)}.pdf",
+                f"{filename}.pdf",
+                os.path.join(rel_path, f"{filename}.pdf")
+            ]
+            
+            for path in possible_paths:
+                if os.path.exists(path):
+                    file_size = os.path.getsize(path)
+                    if file_size > 1000:
+                        print(f"PDF found at alternative location: {path} ({file_size} bytes)")
+                        return True
+            
+            return False
+
+        except Exception as e:
+            pass
+            
+>>>>>>> suhail/merge
   
 
 def color_cell(cellcolor,celltext):
