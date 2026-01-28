@@ -310,6 +310,10 @@ class PSOUIManager:
             log_h = total_height - cad_h
             self.parent.cad_log_splitter.setSizes([cad_h, log_h])
 
+        # Show CAD component checkbox toggle (only relevant for CAD view)
+        if hasattr(self.parent, 'cad_comp_widget') and self.parent.cad_comp_widget:
+            self.parent.cad_comp_widget.show()
+        
         # Trigger 3D model generation if requested
         if regenerate_model:
             print("[DEBUG] Triggering delayed 3D model generation (post-PSO restoration)")
@@ -335,6 +339,10 @@ class PSOUIManager:
             self.parent.cad_widget.hide()
             self.parent.cad_widget.setParent(None)  # Remove from splitter
             self._hidden_cad_widget = self.parent.cad_widget
+        
+        # Hide CAD component checkbox toggle (not relevant for PSO graph view)
+        if hasattr(self.parent, 'cad_comp_widget') and self.parent.cad_comp_widget:
+            self.parent.cad_comp_widget.hide()
         
         # THEN: Insert PSO at index 0
         self.parent.cad_log_splitter.insertWidget(0, self._hidden_pso_widget)
