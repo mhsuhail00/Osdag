@@ -2114,7 +2114,15 @@ class PlateGirderWelded(Member):
                         else:
                             self.shearflag2 = False
 
-                    if self.shearflag1 == True and self.shearflag2 == True:
+                    # Web Crippling Check for thin web (same as thick web path)
+                    web_height = self.total_depth - self.top_flange_thickness - self.bottom_flange_thickness
+                    is_safe_crip, self.F_q = check_web_crippling(
+                        self.load.shear_force, self.b1, self.web_thickness,
+                        self.material.fy, web_height, self.gamma_m0, self.logger
+                    )
+                    self.shearflag3 = is_safe_crip
+
+                    if self.shearflag1 == True and self.shearflag2 == True and self.shearflag3 == True:
                         self.shearchecks = True
                     else:
                         self.shearchecks = False
