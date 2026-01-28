@@ -819,10 +819,20 @@ class ButtJointBolted(MomentConnection):
         self.number_r_c_bolts(design_dictionary,0,0)
 
     def number_r_c_bolts(self,design_dictionary,count=0,hit=0):
-        # Add maximum iteration limit
-        MAX_ITERATIONS = 100
-        iteration_count = 0
-
+        """
+        Calculate bolt layout (rows x cols) using row-first increment algorithm.
+        
+        Per IS 800:2007:
+        - min_pitch/gauge: Cl. 10.2.2 (2.5d)
+        - min_edge_dist: Cl. 10.2.4.2 (1.7d₀ or 1.5d₀)
+        - max_pitch: Cl. 10.2.3.1 (min(32t, 300mm))
+        - max_edge_dist: Cl. 10.2.4.3 (12tε)
+        
+        Bolt layout convention:
+        - rows: bolts across width (gauge direction) - min 2 for butt joint
+        - cols: bolts along length (pitch direction) - min 2 for butt joint
+        - For economical design, rows are incremented first to minimize connection length
+        """
         bolt_cap = self.bolt.bolt_capacity
         if self.bolt.bolt_type == TYP_BEARING:
             self.slip_res = 'N/A'
@@ -832,57 +842,90 @@ class ButtJointBolted(MomentConnection):
             self.bolt.bolt_shear_capacity = 'N/A'
 
         if hit == 0:
-            self.number_bolts = float(self.tensile_force) /( bolt_cap / 1000)
+            self.number_bolts = float(self.tensile_force) / (bolt_cap / 1000)
         else:
             self.number_bolts += 1
 
         self.number_bolts = math.ceil(self.number_bolts)
-        if self.number_bolts < 2:
-            self.number_bolts = 2
-
-        # Calculate optimal bolt arrangement
-        # Standard: Rows = along length (force direction), Cols = across width (transverse)
-        self.rows = max(1, math.ceil(math.sqrt(self.number_bolts)))
-        self.cols = math.ceil(self.number_bolts / self.rows)
-
-        def check_cols_fit_in_width(num_cols):
-            # Check if columns (width-wise) fit within plate width
-            required_width = 2 * self.bolt.min_edge_dist_round
-            if num_cols > 1:
-                required_width += (num_cols - 1) * self.bolt.min_gauge_round
-            
-            return float(self.width) >= required_width
-
-        # Add safety check for minimum width
-        if not check_cols_fit_in_width(1):
-            self.design_status = False
-            self.logger.error(f": Width ({self.width} mm) is too small. Minimum required width is {2 * self.bolt.min_edge_dist_round} mm")
-            self.logger.info(" :=========End Of design===========")
-            return
-
-        # Adjust layout if it fits within width
-        while not check_cols_fit_in_width(self.cols):
-            if self.cols > 1:
-                self.cols -= 1
-                self.rows = math.ceil(self.number_bolts / self.cols)
-            else:
-                break
         
-        if not check_cols_fit_in_width(self.cols):
+        # Minimum bolts for butt joint: 4 (in 2 rows × 2 columns arrangement)
+        if self.number_bolts < 4:
+            self.number_bolts = 4
+
+        # === ROW-FIRST LAYOUT ALGORITHM ===
+        # Step 1: Calculate available width for bolts (after deducting edge distances)
+        min_edge_dist = self.bolt.min_edge_dist_round
+        min_gauge = self.bolt.min_gauge_round
+        plate_width = float(self.width)
+
+        available_width = plate_width - 2 * min_edge_dist
+
+        # Step 2: Check if plate width is sufficient for minimum 2 rows
+        min_required_width = 2 * min_edge_dist + min_gauge
+        if plate_width < min_required_width:
             self.design_status = False
-            self.logger.error(": Could not find valid bolt arrangement fitting within plate width.")
+            self.logger.error(f": Width ({plate_width} mm) is too small. Minimum required width is {min_required_width} mm for 2 rows")
             self.logger.info(" :=========End Of design===========")
             return
 
-        if self.rows > 1:
-            self.len_conn = (self.rows - 1) * self.bolt.min_pitch_round + 2 * self.bolt.min_end_dist_round
+        # Step 3: Calculate maximum bolts that can fit across width (rows in gauge direction)  
+        if available_width >= min_gauge:
+            max_bolts_per_row = int(available_width / min_gauge) + 1
+        else:
+            max_bolts_per_row = 1
+
+        # Ensure at least 2 bolts per row for butt joint
+        if max_bolts_per_row < 2:
+            self.design_status = False
+            self.logger.error(f": Width ({plate_width} mm) is too small for minimum 2 rows.")
+            self.logger.info(" :=========End Of design===========")
+            return
+
+        # Step 4: Row-first increment algorithm for economical design
+        # Start with minimum: 2 columns (along length), and fill rows first
+        self.cols = 2  # Minimum 2 columns for butt joint
+        self.rows = min(math.ceil(self.number_bolts / self.cols), max_bolts_per_row)
+        
+        # Ensure at least 2 rows
+        if self.rows < 2:
+            self.rows = 2
+        
+        # If more bolts needed, add columns (along length) while keeping rows maxed
+        while self.rows * self.cols < self.number_bolts:
+            if self.rows < max_bolts_per_row:
+                # First try to add more rows (across width)
+                self.rows += 1
+            else:
+                # If rows maxed out, add a column
+                self.cols += 1
+                # Redistribute rows for this new column count
+                self.rows = math.ceil(self.number_bolts / self.cols)
+                if self.rows > max_bolts_per_row:
+                    self.rows = max_bolts_per_row
+                # Ensure at least 2 rows
+                if self.rows < 2:
+                    self.rows = 2
+
+        # Update actual number of bolts
+        self.number_bolts = self.rows * self.cols
+
+        # Enforce minimum for butt joint: 2 rows × 2 columns
+        if self.rows < 2:
+            self.rows = 2
+        if self.cols < 2:
+            self.cols = 2
+        self.number_bolts = self.rows * self.cols
+
+        # Calculate connection length (determined by columns along pitch direction)
+        if self.cols > 1:
+            self.len_conn = (self.cols - 1) * self.bolt.min_pitch_round + 2 * self.bolt.min_end_dist_round
         else:
             self.len_conn = 2 * self.bolt.min_end_dist_round
 
-        if self.number_bolts >= 2 and count == 0:
+        if self.number_bolts >= 4 and count == 0:
             self.design_status = True
             self.check_capacity_reduction_1(design_dictionary)
-        elif self.number_bolts>=2 and count == 1:
+        elif self.number_bolts >= 4 and count == 1:
             self.design_status = True
             self.final_formatting(design_dictionary)
         else:
@@ -938,12 +981,13 @@ class ButtJointBolted(MomentConnection):
 
     def final_formatting(self,design_dictionary):
         """Final checks and formatting as per IS 800:2007"""
-        # Handle single COLUMN case (width-wise)
-        if self.cols <= 1:
-            self.final_gauge = 0  # No gauge distance needed for single column
+        # Handle single ROW case (width-wise)
+        # rows = bolts across width (gauge direction)
+        if self.rows <= 1:
+            self.final_gauge = 0  # No gauge distance needed for single row
             self.final_pitch = self.bolt.min_pitch_round
             
-            # Edge distance is half of remaining width
+            # Edge distance is half of plate width
             self.final_edge_dist = float(self.width) / 2.0
             self.final_end_dist = self.bolt.min_end_dist_round
                  
@@ -953,13 +997,27 @@ class ButtJointBolted(MomentConnection):
             self.final_pitch = self.bolt.min_pitch_round
             
             # Calculate gauge based on min edge distance
-            gauge_dist = (float(self.width) - 2*self.bolt.min_edge_dist_round)/(self.cols - 1)
+            # rows = bolts across width, so (rows-1) gauge spaces
+            gauge_dist = (float(self.width) - 2*self.bolt.min_edge_dist_round)/(self.rows - 1)
 
+            # Check minimum gauge per IS 800:2007 Cl 10.2.2: min = 2.5d
+            if gauge_dist < self.bolt.min_gauge_round:
+                # Plate too narrow for 2+ rows - reduce to single row
+                self.logger.warning(f": Plate width ({self.width}mm) insufficient for {self.rows} rows "
+                                   f"with min gauge ({self.bolt.min_gauge_round}mm). Reducing to 1 row.")
+                self.rows = 1
+                self.cols = self.number_bolts  # All bolts in single row
+                self.final_gauge = 0
+                self.final_edge_dist = float(self.width) / 2.0
+                self.final_end_dist = self.bolt.min_end_dist_round
+                # Recalculate connection length for single row
+                self.len_conn = (self.cols - 1) * self.bolt.min_pitch_round + 2 * self.bolt.min_end_dist_round
+                self.design_status = True
             # Check maximum gauge as per Cl. 10.2.3.1
-            if gauge_dist > self.max_gauge_round:
+            elif gauge_dist > self.max_gauge_round:
                 self.final_gauge = self.max_gauge_round
                 # Recalculate edge distance
-                edge_dist = (float(self.width) - ((self.cols - 1)*self.final_gauge))/2
+                edge_dist = (float(self.width) - ((self.rows - 1)*self.final_gauge))/2
                 
                 if edge_dist > self.bolt.max_edge_dist_round:
                      self.design_status = False
