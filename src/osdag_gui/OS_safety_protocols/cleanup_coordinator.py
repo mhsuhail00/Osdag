@@ -165,6 +165,17 @@ class CleanupCoordinator:
         # Prevent double cleanup
         if getattr(template_page, '_cleanup_done', False):
             return True
+        
+        # CRITICAL: Clean PSO resources FIRST to avoid stale widget references
+        # The PSO manager may hold references to widgets (e.g., _hidden_cad_widget)
+        # that must be cleared before we erase OCC objects, otherwise we get
+        # "free(): corrupted unsorted chunks" heap corruption on deleteLater()
+        if hasattr(template_page, '_pso_manager') and template_page._pso_manager:
+            try:
+                template_page._pso_manager.cleanup()
+                template_page._pso_manager = None
+            except Exception as e:
+                print(f"[CleanupCoordinator] PSO cleanup error: {e}")
             
         result = self._execute_cleanup(
             cad_widget=template_page.cad_widget,

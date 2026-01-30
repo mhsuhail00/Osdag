@@ -722,26 +722,32 @@ class MainWindow(QMainWindow):
         module = self._get_template_instance(index)
         
         if to_save and is_last_tab:
-            result = CustomMessageBox(
-                title="Confirm Exit",
-                text=(
-                    f"'{tab_title}' is the last tab.\n"
-                     "Closing it will exit Osdag.\n"
-                    f"Do you want to save your '{tab_title}' design before closing?"
-                ),
-                buttons=["Save and Exit", "Exit Without Saving", "Cancel"]
-            ).exec()
-            
-            if result == "Save and Exit":
-                # Call Save Function
-                module.saveDesign()
-                # Exit Osdag
-                self.close()
-            elif result == "Exit Without Saving":
-                # Exit Osdag
-                self.close()
-            elif result == "Cancel":
-                return False
+            # Check if we're already in close_osdag flow - if so, just close the tab
+            if getattr(self, '_closing_tabs', False):
+                self._close_tab(index)
+            else:
+                result = CustomMessageBox(
+                    title="Confirm Exit",
+                    text=(
+                        f"'{tab_title}' is the last tab.\n"
+                         "Closing it will exit Osdag.\n"
+                        f"Do you want to save your '{tab_title}' design before closing?"
+                    ),
+                    buttons=["Save and Exit", "Exit Without Saving", "Cancel"]
+                ).exec()
+                
+                if result == "Save and Exit":
+                    # Call Save Function
+                    module.saveDesign()
+                    # Close tab first, then exit Osdag
+                    self._close_tab(index)
+                    self.close()
+                elif result == "Exit Without Saving":
+                    # Close tab first, then exit Osdag
+                    self._close_tab(index)
+                    self.close()
+                elif result == "Cancel":
+                    return False
         
         elif to_save:
             result = CustomMessageBox(
@@ -798,47 +804,73 @@ class MainWindow(QMainWindow):
             return False
     
     # It is triggered by quit and close button of main window
-    # It closes all the tabs one by one if not cancelled in between
     def close_osdag(self):
-        """Close Osdag application by closing all tabs first.
+        """Close Osdag - user-led sequential approach.
         
-        Shows confirmation dialog first, then closes tabs properly before
-        calling self.close() to prevent double cleanup in closeEvent.
+        If only Home tab: confirm and close.
+        If multiple tabs with designs: inform user to close tabs individually.
+        If multiple tabs without designs: confirm and close all.
         """
-        # Show confirmation dialog first
-        result = CustomMessageBox(
-            title="Exit Osdag",
-            text="Are you sure you want to close Osdag?",
-            buttons=["Yes", "No"],
-            dialogType=MessageBoxType.Warning,
-        ).exec()
+        tab_count = self.tab_bar.count()
         
-        if result != "Yes":
-            return  # User cancelled
-        
-        # Mark that we're in the middle of closing tabs to prevent closeEvent double cleanup
-        self._closing_tabs = True
-        
-        try:
-            # Close all tabs one by one (reverse order to avoid index shifting issues)
-            while self.tab_bar.count() > 0:
-                current_index = self.tab_bar.currentIndex()
-                close_result = self.handle_close_tab(current_index)
+        # Check if only Home tab is open (no unsaved designs possible)
+        if tab_count == 1:
+            tab_title = self.tab_bar.tabText(0)
+            if tab_title == "Home" or not self._check_design_done(0):
+                # Simple confirmation - no design to save
+                result = CustomMessageBox(
+                    title="Exit Osdag",
+                    text="Are you sure you want to close Osdag?",
+                    buttons=["Yes", "No"],
+                    dialogType=MessageBoxType.Warning,
+                ).exec()
                 
-                if close_result is False:
-                    # User cancelled - abort closing
-                    self._closing_tabs = False
-                    return
-                
-                # If this was the last tab and handle_close_tab called self.close(), 
-                # the window is already closing
-                if self.tab_bar.count() == 0:
+                if result == "Yes":
+                    self._closing_tabs = True
+                    self._close_tab(0)
+                    self.close()
+                return
+        
+        # Multiple tabs open - check for tabs with potential unsaved work
+        design_tabs = []
+        for i in range(tab_count):
+            title = self.tab_bar.tabText(i)
+            if title != "Home" and self._check_design_done(i):
+                design_tabs.append(title)
+        
+        if design_tabs:
+            # There are tabs with potential unsaved designs
+            CustomMessageBox(
+                title="Save Your Designs",
+                text=(
+                    "You have designs open that may need to be saved:\n"
+                    f"{', '.join(design_tabs)}\n\n"
+                    "Please close each tab individually to save or discard your work."
+                ),
+                buttons=["OK"],
+                dialogType=MessageBoxType.Warning,
+            ).exec()
+            
+            # Switch to first design tab so user can act
+            for i in range(tab_count):
+                if self.tab_bar.tabText(i) != "Home":
+                    self.tab_bar.setCurrentIndex(i)
                     break
-        finally:
-            self._closing_tabs = False
-        
-        # All tabs closed successfully - now close the main window
-        self.close()
+        else:
+            # No designs to save - confirm and close all
+            result = CustomMessageBox(
+                title="Exit Osdag",
+                text=f"Close all {tab_count} tabs and exit Osdag?",
+                buttons=["Yes", "No"],
+                dialogType=MessageBoxType.Warning,
+            ).exec()
+            
+            if result == "Yes":
+                self._closing_tabs = True
+                # Close tabs one by one (no save prompts needed)
+                while self.tab_bar.count() > 0:
+                    self._close_tab(0)
+                self.close()
     
     def _get_template_instance(self, index) -> object:
         return self.tab_widget_content[index].layout().itemAt(0).widget()
@@ -1699,29 +1731,18 @@ class MainWindow(QMainWindow):
             return
         
     def closeEvent(self, event):
-        """Explicitly schedule deletion on close via CleanupCoordinator.
+        """Clean up any remaining tabs and exit.
         
-        Uses AISContextLock to prevent race conditions during app shutdown.
-        CRITICAL: Skip cleanup if tabs were already closed by close_osdag/handle_close_tab.
+        Since tabs are closed individually by user in a user-led flow,
+        this is just a fallback for alt-F4 or window manager close.
         """
-        # Skip cleanup if no tabs remain (already cleaned up by _close_tab calls)
-        if not hasattr(self, 'tab_widget_content') or len(self.tab_widget_content) == 0:
-            print("[APP EXIT] Tabs already cleaned up, skipping cleanup_for_app_exit")
-            event.accept()
-            self.deleteLater()
-            return
-            
-        try:
-            from osdag_gui.OS_safety_protocols import AISContextLock
-            with AISContextLock():
-                coordinator = get_cleanup_coordinator()
-                coordinator.cleanup_for_app_exit(self)
-        except ImportError:
-            # Fallback without lock
-            coordinator = get_cleanup_coordinator()
-            coordinator.cleanup_for_app_exit(self)
-        except Exception as e:
-            print(f"[APP EXIT] Cleanup error: {e}")
+        # If tabs remain (user closed via alt-F4 or window manager)
+        if hasattr(self, 'tab_widget_content') and len(self.tab_widget_content) > 0:
+            print(f"[APP EXIT] Closing {len(self.tab_widget_content)} remaining tabs")
+            self._closing_tabs = True
+            # Close tabs one by one - this uses existing _close_tab cleanup
+            while self.tab_bar.count() > 0:
+                self._close_tab(0)
         
         event.accept()
         self.deleteLater()
