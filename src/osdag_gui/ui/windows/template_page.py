@@ -107,9 +107,11 @@ class CustomWindow(QWidget):
                 pass
 
         # 2. Use CleanupCoordinator for OCC safety
-        coordinator = get_cleanup_coordinator()
-        # This handles GC disabling, OCC object erasure, and reference clearing safely
-        coordinator.cleanup_for_tab_close(self)
+        # ONLY call cleanup if NOT already done by main_window._close_tab()
+        # The _cleanup_done flag is set by cleanup_for_tab_close() to prevent double cleanup
+        if not getattr(self, '_cleanup_done', False):
+            coordinator = get_cleanup_coordinator()
+            coordinator.cleanup_for_tab_close(self)
 
         super().closeEvent(event)
 
@@ -1718,11 +1720,9 @@ class CustomWindow(QWidget):
         # Ensure display is ready before 3D rendering
         if self._is_display_ready():
             try:
-                # Use CleanupCoordinator for safe cleanup before new model
-                from osdag_gui.OS_safety_protocols import get_cleanup_coordinator
-                coordinator = get_cleanup_coordinator()
-                coordinator.cleanup_for_new_design(self.cad_widget, self.display)
-                
+                # NOTE: Cleanup is handled INSIDE display_3DModel() (common_logic.py:2863)
+                # Do NOT call cleanup_for_new_design() here to avoid duplicate cleanup
+                # which can cause "free(): corrupted unsorted chunks" on tab close
                 self.commLogicObj.call_3DModel(status, main)
                 # NOTE: DO NOT call gc.collect() after CAD operations!
             except Exception as e:

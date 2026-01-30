@@ -305,6 +305,11 @@ class OCCMemoryManager:
             True if cleanup was performed, False if skipped (already in progress)
         """
         with self._lock:
+            # Skip if widget was already unregistered (e.g., tab closed)
+            # This prevents use-after-free on already-cleaned widgets
+            if widget_id not in self._registry:
+                return False
+            
             if self._cleanup_in_progress.get(widget_id, False):
                 print(f"[OCCMemoryManager] Cleanup already in progress for widget {widget_id}")
                 return False
