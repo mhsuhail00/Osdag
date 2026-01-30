@@ -14,6 +14,14 @@ import time
 from PySide6.QtWidgets import QApplication, QComboBox, QWidget
 from PySide6.QtCore import QTimer
 
+# Import safe_processEvents for thread-safe UI updates during CAD operations
+try:
+    from osdag_gui.OS_safety_protocols import safe_processEvents
+except ImportError:
+    # Fallback to direct call if not available
+    def safe_processEvents():
+        QApplication.processEvents()
+
 if TYPE_CHECKING:
     from osdag_gui.ui.windows.template_page import TemplatePage
 
@@ -160,14 +168,15 @@ class PSOUIManager:
                 if self.pso_viz:
                     self.pso_viz.add_particle_data(depth, ur, weight, iteration, particle_idx, position, variables, lb, ub)
                     # Only process events once per iteration (not per particle!)
+                    # Use safe_processEvents() to prevent AIS context race conditions
                     if iteration != self._last_pso_iter:
                         self._last_pso_iter = iteration
-                        QApplication.processEvents()
+                        safe_processEvents()
             
             self.parent.backend._viz_callback = viz_callback
             
-            # Force UI update before starting design
-            QApplication.processEvents()
+            # Force UI update before starting design (safe version)
+            safe_processEvents()
             
         except Exception as e:
             import traceback

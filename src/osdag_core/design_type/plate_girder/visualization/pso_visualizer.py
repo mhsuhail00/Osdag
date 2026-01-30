@@ -31,6 +31,14 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QFont
 
+# Import safe_processEvents for thread-safe UI updates during CAD operations
+try:
+    from osdag_gui.OS_safety_protocols import safe_processEvents
+except ImportError:
+    # Fallback to direct call if not available
+    def safe_processEvents():
+        QApplication.processEvents()
+
 
 # ============== COLORS (matching Osdag theme) ==============
 SAFE_COLOR = '#4ADE80'      # Green for feasible (UR <= 1)
@@ -747,7 +755,7 @@ class PSOVisualizerWidget(QWidget):
         
         self.btn_save.setText("Saving...")
         self.btn_save.setEnabled(False)
-        QApplication.processEvents()
+        safe_processEvents()  # Use safe version to prevent AIS context race conditions
         
         try:
             self.canvas.fig.savefig(file_path, dpi=150, bbox_inches='tight', facecolor='white')

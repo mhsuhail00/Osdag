@@ -4,6 +4,15 @@ from PySide6.QtWidgets import QApplication, QVBoxLayout, QDialog, QLabel
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPainter, QColor, QPen, QIcon
 
+# Import safe_processEvents for thread-safe UI updates
+try:
+    from osdag_gui.OS_safety_protocols import safe_processEvents
+except ImportError:
+    # Fallback to direct call if not available
+    def safe_processEvents():
+        QApplication.processEvents()
+
+
 
 class CircularProgressWidget(QLabel):
     def __init__(self, is_light_theme, parent=None):
@@ -220,7 +229,7 @@ class LoadingDialogManager:
             if self._dialog is None:
                 self._dialog = ModernLoadingDialog(is_light_theme=self.is_light_theme)
             self._dialog.show()
-            QApplication.processEvents()  # Ensure dialog is drawn
+            safe_processEvents()  # Ensure dialog is drawn (safe version)
     
     def hide(self):
         """Hide the loading dialog"""
