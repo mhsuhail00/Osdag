@@ -762,20 +762,27 @@ class MainWindow(QMainWindow):
                 return False
 
         elif is_last_tab:
-            result = CustomMessageBox(
-                title="Confirm Exit",
-                text=f"'{tab_title}' is the last tab.\nClosing it will exit Osdag.\nDo you really want to close this tab?",
-                buttons=["Yes", "No"],
-                dialogType=MessageBoxType.Warning,
-            ).exec()
+            # Check if we're already in close_osdag flow - if so, just close the tab
+            if getattr(self, '_closing_tabs', False):
+                self._close_tab(index)
+            else:
+                # User clicked X on the last tab - ask confirmation
+                result = CustomMessageBox(
+                    title="Confirm Exit",
+                    text=f"'{tab_title}' is the last tab.\nClosing it will exit Osdag.\nDo you really want to close this tab?",
+                    buttons=["Yes", "No"],
+                    dialogType=MessageBoxType.Warning,
+                ).exec()
 
-            # Handle result
-            if result == "Yes":
-                self.close()  # Close the main window (exit Osdag)
-            elif result == "No":
-                return False
-            elif result == "Cancel":
-                return False
+                # Handle result
+                if result == "Yes":
+                    # CRITICAL: Close the tab FIRST to cleanup CAD, then exit app
+                    self._close_tab(index)
+                    self.close()  # Close the main window (exit Osdag)
+                elif result == "No":
+                    return False
+                elif result == "Cancel":
+                    return False
         else:
             self._close_tab(index)
 
@@ -793,18 +800,45 @@ class MainWindow(QMainWindow):
     # It is triggered by quit and close button of main window
     # It closes all the tabs one by one if not cancelled in between
     def close_osdag(self):
-        # Close all tabs one by one
-        while self.tab_bar.count() > 0:
-            current_index = self.tab_bar.currentIndex()
-            close = self.handle_close_tab(current_index)
-            if close is False:
-                # If someone cancel to save while closing tabs, then stop closing further tabs
-                return
-            # Cleanup Coordinator takes some time
-            # All tabs closed
-            if current_index == 0:
-                return
-        # Finally the main window closed
+        """Close Osdag application by closing all tabs first.
+        
+        Shows confirmation dialog first, then closes tabs properly before
+        calling self.close() to prevent double cleanup in closeEvent.
+        """
+        # Show confirmation dialog first
+        result = CustomMessageBox(
+            title="Exit Osdag",
+            text="Are you sure you want to close Osdag?",
+            buttons=["Yes", "No"],
+            dialogType=MessageBoxType.Warning,
+        ).exec()
+        
+        if result != "Yes":
+            return  # User cancelled
+        
+        # Mark that we're in the middle of closing tabs to prevent closeEvent double cleanup
+        self._closing_tabs = True
+        
+        try:
+            # Close all tabs one by one (reverse order to avoid index shifting issues)
+            while self.tab_bar.count() > 0:
+                current_index = self.tab_bar.currentIndex()
+                close_result = self.handle_close_tab(current_index)
+                
+                if close_result is False:
+                    # User cancelled - abort closing
+                    self._closing_tabs = False
+                    return
+                
+                # If this was the last tab and handle_close_tab called self.close(), 
+                # the window is already closing
+                if self.tab_bar.count() == 0:
+                    break
+        finally:
+            self._closing_tabs = False
+        
+        # All tabs closed successfully - now close the main window
+        self.close()
     
     def _get_template_instance(self, index) -> object:
         return self.tab_widget_content[index].layout().itemAt(0).widget()
@@ -876,25 +910,42 @@ class MainWindow(QMainWindow):
             print(f"[ERROR] Error cleaning scroll area: {e}")
 
     def _close_tab(self, index):
-        """Close tab with comprehensive cleanup via CleanupCoordinator."""
+        """Close tab with comprehensive cleanup via CleanupCoordinator.
+        
+        CRITICAL: Cleanup MUST happen BEFORE any UI operations to prevent
+        OCC memory corruption (free(): corrupted unsorted chunks).
+        """
         widget = self.tab_widget.widget(index)
         template_instance = self._get_template_instance(index)
         
-        # Get module name for debug logging
+        # Get module name for debug logging (this may fail for Home tabs)
         module_name = "Unknown"
-        if template_instance and hasattr(template_instance, 'backend') and template_instance.backend:
-            try:
+        try:
+            if template_instance and hasattr(template_instance, 'backend') and template_instance.backend:
                 module_name = template_instance.backend.module_name()
-                # Use CleanupCoordinator
-                if template_instance:
-                    coordinator = get_cleanup_coordinator()
-                    coordinator.cleanup_for_tab_close(template_instance)
-            except Exception:
-                pass
+        except Exception:
+            pass
         
         print(f"[TAB CLOSE] Closing tab index {index}: '{module_name}'")
+        
+        # CRITICAL: Cleanup MUST happen BEFORE UI operations
+        # This prevents OCC heap corruption from race conditions
+        if template_instance and hasattr(template_instance, 'cad_widget'):
+            try:
+                # Use AISContextLock if available to prevent race conditions
+                try:
+                    from osdag_gui.OS_safety_protocols import AISContextLock
+                    with AISContextLock():
+                        coordinator = get_cleanup_coordinator()
+                        coordinator.cleanup_for_tab_close(template_instance)
+                except ImportError:
+                    # Fallback without lock
+                    coordinator = get_cleanup_coordinator()
+                    coordinator.cleanup_for_tab_close(template_instance)
+            except Exception as e:
+                print(f"[TAB CLOSE] Cleanup error: {e}")
 
-        # Remove from UI structures
+        # Remove from UI structures (AFTER cleanup)
         self.tab_widget.removeTab(index)
         self.tab_bar.removeTab(index)
         self.tab_widget_content.pop(index)
@@ -934,8 +985,22 @@ class MainWindow(QMainWindow):
                     child.deleteLater()
 
     def _synchronize_tab_widget(self):
+        """Synchronize tab bar with tab widget content.
+        
+        CRITICAL: Must handle case when no tabs remain (after last tab closed).
+        """
         current_index = self.tab_bar.currentIndex()
+        
+        # Guard: No tabs left, nothing to synchronize
+        if current_index < 0 or len(self.tab_widget_content) == 0:
+            return
+            
         self.tab_widget.setCurrentIndex(current_index)
+        
+        # Guard: Index out of bounds
+        if current_index >= len(self.tab_widget_content):
+            return
+            
         # Update global variables and icons
         body_widget = self.tab_widget_content[current_index]
         if hasattr(body_widget, 'layout') and body_widget.layout().count() > 0:
@@ -1634,9 +1699,30 @@ class MainWindow(QMainWindow):
             return
         
     def closeEvent(self, event):
-        """Explicitly schedule deletion on close via CleanupCoordinator."""
-        coordinator = get_cleanup_coordinator()
-        coordinator.cleanup_for_app_exit(self)
+        """Explicitly schedule deletion on close via CleanupCoordinator.
+        
+        Uses AISContextLock to prevent race conditions during app shutdown.
+        CRITICAL: Skip cleanup if tabs were already closed by close_osdag/handle_close_tab.
+        """
+        # Skip cleanup if no tabs remain (already cleaned up by _close_tab calls)
+        if not hasattr(self, 'tab_widget_content') or len(self.tab_widget_content) == 0:
+            print("[APP EXIT] Tabs already cleaned up, skipping cleanup_for_app_exit")
+            event.accept()
+            self.deleteLater()
+            return
+            
+        try:
+            from osdag_gui.OS_safety_protocols import AISContextLock
+            with AISContextLock():
+                coordinator = get_cleanup_coordinator()
+                coordinator.cleanup_for_app_exit(self)
+        except ImportError:
+            # Fallback without lock
+            coordinator = get_cleanup_coordinator()
+            coordinator.cleanup_for_app_exit(self)
+        except Exception as e:
+            print(f"[APP EXIT] Cleanup error: {e}")
+        
         event.accept()
         self.deleteLater()
 
