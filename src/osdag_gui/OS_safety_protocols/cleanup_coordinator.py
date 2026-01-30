@@ -47,6 +47,7 @@ class CleanupCoordinator:
         """Core cleanup execution with proper ordering.
 
         Steps:
+        0. Acquire AISContextLock to prevent race conditions
         1. Block signals
         2. Disable GC
         3. Clear Python references (widget-specific cleanup)
@@ -55,6 +56,7 @@ class CleanupCoordinator:
         6. Repaint display
         7. Enable GC
         8. Unblock signals
+        9. Release AISContextLock
         """
         with self._lock:
             if self._cleanup_in_progress:
@@ -63,7 +65,19 @@ class CleanupCoordinator:
             self._cleanup_in_progress = True
 
         gc_was_enabled = gc.isenabled()
+        
+        # Import AISContextLock for thread-safe context operations
         try:
+            from osdag_gui.OS_safety_protocols import AISContextLock
+            ais_lock_available = True
+        except ImportError:
+            ais_lock_available = False
+            
+        try:
+            # Step 0: Acquire AIS context lock
+            if ais_lock_available:
+                AISContextLock.block_processEvents()
+                
             # Step 1: Block signals
             if cad_widget:
                 cad_widget.blockSignals(True)
@@ -75,7 +89,7 @@ class CleanupCoordinator:
             if cad_widget and hasattr(cad_widget, 'cleanup_for_new_model'):
                 cad_widget.cleanup_for_new_model()
 
-            # Step 4: Remove from OCC context
+            # Step 4: Remove from OCC context (protected by AISContextLock)
             if display:
                 try:
                     display.EraseAll()
@@ -119,6 +133,9 @@ class CleanupCoordinator:
             # Unblock signals
             if cad_widget:
                 cad_widget.blockSignals(False)
+            # Step 9: Release AISContextLock
+            if ais_lock_available:
+                AISContextLock.unblock_processEvents()
             with self._lock:
                 self._cleanup_in_progress = False
 
