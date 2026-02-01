@@ -20,7 +20,7 @@ ensure_safe_startup()
 # Now safe to import Qt and other modules
 # =============================================================================
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox
-from PySide6.QtCore import Qt, QThread, Signal, QFile, QTextStream
+from PySide6.QtCore import Qt, QThread, Signal, QFile, QTextStream, QTimer
 from PySide6.QtGui import QFontDatabase, QFont, QIcon
 
 # Disable native file dialogs globally to prevent OpenGL context conflicts
@@ -221,7 +221,8 @@ def gui():
         app.internet_connectivity = InternetConnectivity() # --- Internet Connectivity object ---
         # Parallely load the MainWindow
         app.main_window = MainWindow()
-        app.main_window.show()
+        # To ensure no Jittering on startup
+        QTimer.singleShot(50, lambda: app.main_window.show())
         app.setWindowIcon(QIcon(":/images/osdag_logo.png"))
 
     splash = LaunchScreenPopup(on_finish=show_main_window)
