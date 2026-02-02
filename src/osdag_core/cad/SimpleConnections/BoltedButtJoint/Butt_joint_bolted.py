@@ -31,21 +31,21 @@ def create_bolted_butt_joint(plate1_thickness = 4, plate2_thickness = 4,cover_th
     print("debug: "+ str(gauge))
     print(bolt_cols)
     print("+"*10)
-    if gauge == 0 and bolt_cols >= 1: 
-        """
-        this if statement is added temporarily to fix the calculation error. 
-        Please comment or remove once the calculation bug is fixed
-        """
+    # if gauge == 0 and bolt_cols >= 1: 
+    #     """
+    #     this if statement is added temporarily to fix the calculation error. 
+    #     Please comment or remove once the calculation bug is fixed
+    #     """
 
-        available_width = plate_width - (2 * edge)
-        temp = bolt_cols
-        bolt_cols = bolt_rows
-        bolt_rows = temp
-        if bolt_cols!=1:
-            gauge = available_width / (bolt_cols - 1)
-        else:
-            gauge = available_width
-        print(f"DEBUG BOLT: gauge was 0, calculated gauge={gauge} from plate_width={plate_width}, edge={edge}")
+    #     available_width = plate_width - (2 * edge)
+    #     temp = bolt_cols
+    #     bolt_cols = bolt_rows
+    #     bolt_rows = temp
+    #     if bolt_cols!=1:
+    #         gauge = available_width / (bolt_cols - 1)
+    #     else:
+    #         gauge = available_width
+    #     print(f"DEBUG BOLT: gauge was 0, calculated gauge={gauge} from plate_width={plate_width}, edge={edge}")
     
     # Calculate cover plate length based on the formula: 2 * [(2*end) + (rows-1)*pitch]
     # bolt_rows is the number of rows (lines parallel to X-axis) - count along Y-axis
