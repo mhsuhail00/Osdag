@@ -837,9 +837,9 @@ class ButtJointBolted(MomentConnection):
 
         self.number_bolts = math.ceil(self.number_bolts)
         
-        # Minimum bolts for butt joint: 4 (in 2 rows × 2 columns arrangement)
-        if self.number_bolts < 4:
-            self.number_bolts = 4
+        # Minimum bolts for butt joint: 2 (in 2 rows x 1 column arrangement)
+        if self.number_bolts < 2:
+            self.number_bolts = 2
 
         # === ROW-FIRST LAYOUT ALGORITHM ===
         # Step 1: Calculate available width for bolts (after deducting edge distances)
@@ -872,7 +872,7 @@ class ButtJointBolted(MomentConnection):
 
         # Step 4: Row-first increment algorithm for economical design
         # Start with minimum: 2 columns (along length), and fill rows first
-        self.cols = 2  # Minimum 2 columns for butt joint
+        self.cols = 1  # Minimum 1 column for butt joint
         self.rows = min(math.ceil(self.number_bolts / self.cols), max_bolts_per_row)
         
         # Ensure at least 2 rows
@@ -898,11 +898,11 @@ class ButtJointBolted(MomentConnection):
         # Update actual number of bolts
         self.number_bolts = self.rows * self.cols
 
-        # Enforce minimum for butt joint: 2 rows × 2 columns
+        # Enforce minimum for butt joint: 2 rows x 1 column
         if self.rows < 2:
             self.rows = 2
-        if self.cols < 2:
-            self.cols = 2
+        if self.cols < 1:
+            self.cols = 1
         self.number_bolts = self.rows * self.cols
 
         # Calculate connection length (determined by columns along pitch direction)
@@ -911,10 +911,10 @@ class ButtJointBolted(MomentConnection):
         else:
             self.len_conn = 2 * self.bolt.min_end_dist_round
 
-        if self.number_bolts >= 4 and count == 0:
+        if self.number_bolts >= 2 and count == 0:
             self.design_status = True
             self.check_capacity_reduction_1(design_dictionary)
-        elif self.number_bolts >= 4 and count == 1:
+        elif self.number_bolts >= 2 and count == 1:
             self.design_status = True
             self.final_formatting(design_dictionary)
         else:
