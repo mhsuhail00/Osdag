@@ -55,7 +55,7 @@ class ButtJointBolted(MomentConnection):
         # Bolt, Detailing, and Design tabs
         tabs.append(("Bolt", TYPE_TAB_2, self.bolt_values))
         tabs.append(("Detailing", TYPE_TAB_2, self.detailing_values))
-        tabs.append(("Design", TYPE_TAB_2, self.design_values))
+        #tabs.append(("Design", TYPE_TAB_2, self.design_values))
         return tabs
 
     def tab_value_changed(self):
@@ -172,20 +172,7 @@ class ButtJointBolted(MomentConnection):
     # Design Preference Functions End
     ####################################
     def design_values(self, input_dictionary):
-        values = {
-            KEY_DESIGN_FOR: 'Tension'
-        }
-
-        if input_dictionary and KEY_DESIGN_FOR in input_dictionary:
-            values[KEY_DESIGN_FOR] = input_dictionary[KEY_DESIGN_FOR]
-
-        design = []
-        t1 = (KEY_DESIGN_FOR, KEY_DISP_DESIGN_FOR, TYPE_COMBOBOX,
-              ['Tension', 'Compression'], values[KEY_DESIGN_FOR])
-        design.append(t1)
-
-        return design
-
+        return []
     def set_osdaglogger(self, key, id):
         """
         Function to set Logger for FinPlate Module
@@ -561,8 +548,8 @@ class ButtJointBolted(MomentConnection):
 
                     if option[2] == TYPE_TEXTBOX and option[0] == KEY_AXIAL_FORCE:
 
-                        if float(design_dictionary[option[0]]) <= 0.0:
-                            error = "Input value(s) cannot be equal or less than zero."
+                        if math.isclose(float(design_dictionary[option[0]]), 0.0, abs_tol=1e-9):
+                            error = "Input value for Axial Force must be non-zero."
                             all_errors.append(error)
                         else:
                             flag2 = True
@@ -596,14 +583,16 @@ class ButtJointBolted(MomentConnection):
         self.mainmodule = KEY_DISP_BUTTJOINTBOLTED
         self.main_material = design_dictionary[KEY_MATERIAL]
 
-        self.design_for = design_dictionary.get(KEY_DESIGN_FOR, 'Tension')
+        # self.design_for = design_dictionary.get(KEY_DESIGN_FOR, 'Tension')
         axial_input = design_dictionary.get(
             KEY_AXIAL_FORCE,
             design_dictionary.get(KEY_AXIAL,
                                   design_dictionary.get(KEY_TENSILE_FORCE, 0)))
         axial_value = float(axial_input)
-        if axial_value < 0 and KEY_DESIGN_FOR not in design_dictionary:
+        if axial_value < 0:
             self.design_for = 'Compression'
+        else:
+            self.design_for = 'Tension'
         self.axial_force_kN = abs(axial_value)
         self.axial_force = self.axial_force_kN * 1000.0
         # Legacy naming issue

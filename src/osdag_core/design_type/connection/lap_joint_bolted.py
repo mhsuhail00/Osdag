@@ -61,7 +61,7 @@ class LapJointBolted(MomentConnection):
         # Only Bolt and Detailing tabs
         tabs.append(("Bolt", TYPE_TAB_2, self.bolt_values))
         tabs.append(("Detailing", TYPE_TAB_2, self.detailing_values))
-        tabs.append(("Design", TYPE_TAB_2, self.design_values))
+        #tabs.append(("Design", TYPE_TAB_2, self.design_values))
         return tabs
 
     def tab_value_changed(self):
@@ -86,10 +86,7 @@ class LapJointBolted(MomentConnection):
             KEY_DP_DETAILING_EDGE_TYPE  # For edge preparation method
         ]))
 
-        # Design preferences
-        design_input.append(("Design", TYPE_COMBOBOX, [
-            KEY_DESIGN_FOR
-        ]))
+
         
         return design_input
 
@@ -101,8 +98,7 @@ class LapJointBolted(MomentConnection):
             KEY_DP_BOLT_TYPE,
             KEY_DP_BOLT_HOLE_TYPE, 
             KEY_DP_BOLT_SLIP_FACTOR,
-            KEY_DP_DETAILING_EDGE_TYPE,
-            KEY_DESIGN_FOR
+            KEY_DP_DETAILING_EDGE_TYPE
         ], ''))
         
         return design_input
@@ -113,25 +109,12 @@ class LapJointBolted(MomentConnection):
             KEY_DP_BOLT_TYPE: "Non Pre-tensioned",
             KEY_DP_BOLT_HOLE_TYPE: "Standard",
             KEY_DP_BOLT_SLIP_FACTOR: "0.3",
-            KEY_DP_DETAILING_EDGE_TYPE: "Sheared or hand flame cut",
-            KEY_DESIGN_FOR: 'Tension'
+            KEY_DP_DETAILING_EDGE_TYPE: "Sheared or hand flame cut"
         }
         return defaults.get(key)
 
     def design_values(self, input_dictionary):
-        values = {
-            KEY_DESIGN_FOR: 'Tension'
-        }
-
-        if input_dictionary and KEY_DESIGN_FOR in input_dictionary:
-            values[KEY_DESIGN_FOR] = input_dictionary[KEY_DESIGN_FOR]
-
-        design = []
-        t1 = (KEY_DESIGN_FOR, KEY_DISP_DESIGN_FOR, TYPE_COMBOBOX,
-              ['Tension', 'Compression'], values[KEY_DESIGN_FOR])
-        design.append(t1)
-
-        return design
+        return []
 
     def detailing_values(self, input_dictionary):
         values = {
@@ -467,14 +450,16 @@ class LapJointBolted(MomentConnection):
         self.mainmodule = "Lap Joint Bolted Connection"
         self.main_material = design_dictionary[KEY_MATERIAL]
 
-        self.design_for = design_dictionary.get(KEY_DESIGN_FOR, 'Tension')
+        # self.design_for = design_dictionary.get(KEY_DESIGN_FOR, 'Tension')
         axial_input = design_dictionary.get(
             KEY_AXIAL_FORCE,
             design_dictionary.get(KEY_AXIAL,
                                   design_dictionary.get(KEY_TENSILE_FORCE, 0)))
         axial_value = float(axial_input)
-        if axial_value < 0 and KEY_DESIGN_FOR not in design_dictionary:
+        if axial_value < 0:
             self.design_for = 'Compression'
+        else:
+            self.design_for = 'Tension'
         self.axial_force_kN = abs(axial_value)
         self.axial_force = self.axial_force_kN * 1000.0
         # Legacy naming issue

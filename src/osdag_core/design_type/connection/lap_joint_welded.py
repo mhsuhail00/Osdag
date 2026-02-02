@@ -53,7 +53,7 @@ class LapJointWelded(MomentConnection):
         tabs = []
         tabs.append((("Weld", TYPE_TAB_2, self.weld_values)))
         tabs.append(("Detailing", TYPE_TAB_2, self.detailing_values))
-        tabs.append(("Design", TYPE_TAB_2, self.design_values))  # Add design tab
+        #tabs.append(("Design", TYPE_TAB_2, self.design_values))  # Add design tab
         return tabs
 
     def tab_value_changed(self):
@@ -71,7 +71,7 @@ class LapJointWelded(MomentConnection):
         design_input.append(("Detailing", TYPE_COMBOBOX, [
             KEY_DP_DETAILING_EDGE_TYPE,
         ]))
-        design_input.append(("Design", TYPE_COMBOBOX, [KEY_DESIGN_FOR]))  # Add design preference
+
         return design_input
 
     def input_dictionary_without_design_pref(self):
@@ -79,8 +79,7 @@ class LapJointWelded(MomentConnection):
         design_input.append((None, [
             KEY_DP_WELD_TYPE,
             KEY_DP_WELD_MATERIAL_G_O,
-            KEY_DP_DETAILING_EDGE_TYPE,
-            KEY_DESIGN_FOR  # Add design preference
+            KEY_DP_DETAILING_EDGE_TYPE
         ], ''))
         return design_input
 
@@ -98,18 +97,7 @@ class LapJointWelded(MomentConnection):
         return defaults.get(key)
     
     def design_values(self, input_dictionary):
-        """Content of the 'Design' tab in Design Preferences."""
-        values = {
-                KEY_DESIGN_FOR: 'Tension',
-        }
-        if input_dictionary and KEY_DESIGN_FOR in input_dictionary:
-                values[KEY_DESIGN_FOR] = input_dictionary[KEY_DESIGN_FOR]
-
-        design_tab_content = []
-        t1 = (KEY_DESIGN_FOR, KEY_DISP_DESIGN_FOR, TYPE_COMBOBOX,
-             ['Tension', 'Compression'], values[KEY_DESIGN_FOR])
-        design_tab_content.append(t1)
-        return design_tab_content
+        return []
 
     def detailing_values(self, input_dictionary):
         values = {
@@ -340,8 +328,8 @@ class LapJointWelded(MomentConnection):
                             flag1 = True
                     # Change from KEY_TENSILE_FORCE to KEY_AXIAL_FORCE
                     elif option[0] == KEY_AXIAL_FORCE:
-                        if float(design_dictionary[option[0]]) <= 0.0:
-                            error = "Input value(s) cannot be equal or less than zero."
+                        if math.isclose(float(design_dictionary[option[0]]), 0.0, abs_tol=1e-9):
+                            error = "Input value for Axial Force must be non-zero."
                             all_errors.append(error)
                         else:
                             flag2 = True
@@ -373,8 +361,8 @@ class LapJointWelded(MomentConnection):
         self.mainmodule = "Lap Joint Welded Connection"
         self.main_material = design_dictionary[KEY_MATERIAL]
         
-        # Design mode: default to Tension if not provided
-        self.design_for = design_dictionary.get(KEY_DESIGN_FOR, 'Tension')
+        # Design mode:
+        # self.design_for = design_dictionary.get(KEY_DESIGN_FOR, 'Tension')
         
         # Use axial force instead of tensile force
         axial_kN_str = design_dictionary.get(KEY_AXIAL_FORCE, 
@@ -382,6 +370,10 @@ class LapJointWelded(MomentConnection):
                  design_dictionary.get(KEY_TENSILE_FORCE, 0)))
                  
         self.axial_force = abs(float(axial_kN_str)) * 1000  # N, always positive magnitude
+        if float(axial_kN_str) < 0:
+            self.design_for = 'Compression'
+        else:
+            self.design_for = 'Tension'
         # Maintain backward compatibility: many methods use tensile_force name
         self.tensile_force = self.axial_force
         
@@ -685,7 +677,6 @@ class LapJointWelded(MomentConnection):
             self.report_input = {
                 KEY_MODULE: module,
                 KEY_MAIN_MODULE: mainmodule,
-                KEY_DISP_DESIGN_FOR: design_for,
                 f"Thickness of Plate-1 (mm) *": plate1_thk,
                 f"Thickness of Plate-2 (mm) *": plate2_thk,
                 KEY_DISP_PLATE_WIDTH: width,

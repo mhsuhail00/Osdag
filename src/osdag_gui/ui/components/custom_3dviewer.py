@@ -246,15 +246,19 @@ class CustomViewer3d(qtViewer3d):
         """
         # Reset view cube state
         if hasattr(self, 'view_cube') and self.view_cube:
-            try:
-                # Try to remove from context if possible
-                if self.context:
-                    try:
-                        self.context.Remove(self.view_cube, False)
-                    except Exception:
-                        pass  # May already be removed by EraseAll
-            except Exception:
-                pass
+            # context.Remove(self.view_cube) is REDUNDANT and DANGEROUS here.
+            # CleanupCoordinator calls EraseAll() immediately after this, which safely handles removal.
+            # Explicit removal here can cause double-free/heap corruption if OCC wrappers 
+            # and C++ objects get out of sync during destruction.
+            # try:
+            #     # Try to remove from context if possible
+            #     if self.context:
+            #         try:
+            #             self.context.Remove(self.view_cube, False)
+            #         except Exception:
+            #             pass  # May already be removed by EraseAll
+            # except Exception:
+            #     pass
             self.view_cube = None
         
         # Reset View Cube interaction state
@@ -263,11 +267,12 @@ class CustomViewer3d(qtViewer3d):
         
         # Clear highlighted objects list
         if self.current_highlighted_ais_list and self.context:
-            for obj in self.current_highlighted_ais_list:
-                try:
-                    self.context.Unhilight(obj, False)
-                except Exception:
-                    pass
+            # Unhilight is also handled by EraseAll/RemoveAll or unnecessary during destruction
+            # for obj in self.current_highlighted_ais_list:
+            #     try:
+            #         self.context.Unhilight(obj, False)
+            #     except Exception:
+            #         pass
             self.current_highlighted_ais_list = []
         elif self.current_highlighted_ais_list:
             # Context not available, just clear the list

@@ -60,7 +60,7 @@ class ButtJointWelded(MomentConnection):
         # added this line t.s.
         tabs.append((("Weld", TYPE_TAB_2, self.weld_values)))
         tabs.append(("Detailing", TYPE_TAB_2, self.detailing_values))
-        tabs.append(("Design", TYPE_TAB_2, self.design_values))
+        #tabs.append(("Design", TYPE_TAB_2, self.design_values))
         return tabs
 
     def tab_value_changed(self):
@@ -80,7 +80,7 @@ class ButtJointWelded(MomentConnection):
             KEY_DP_DETAILING_EDGE_TYPE,
             KEY_DP_DETAILING_PACKING_PLATE
         ]))
-        design_input.append(("Design", TYPE_COMBOBOX, [KEY_DESIGN_FOR]))
+
         return design_input
 
     def input_dictionary_without_design_pref(self):
@@ -89,8 +89,7 @@ class ButtJointWelded(MomentConnection):
             KEY_DP_WELD_TYPE,
             KEY_DP_WELD_MATERIAL_G_O,
             KEY_DP_DETAILING_EDGE_TYPE,
-            KEY_DP_DETAILING_PACKING_PLATE,
-            KEY_DESIGN_FOR
+            KEY_DP_DETAILING_PACKING_PLATE
         ], ''))
         return design_input
 
@@ -107,24 +106,12 @@ class ButtJointWelded(MomentConnection):
             # Set weld material grade to fu of selected material
             KEY_DP_WELD_MATERIAL_G_O: str(fu),
             KEY_DP_DETAILING_EDGE_TYPE: "Sheared or hand flame cut",
-            KEY_DP_DETAILING_PACKING_PLATE: "Yes",
-            KEY_DESIGN_FOR: "Tension"
+            KEY_DP_DETAILING_PACKING_PLATE: "Yes"
         }
         return defaults.get(key)
 
     def design_values(self, input_dictionary):
-        """Content of the 'Design' tab in Design Preferences."""
-        values = {
-            KEY_DESIGN_FOR: 'Tension',
-        }
-        if input_dictionary and KEY_DESIGN_FOR in input_dictionary:
-            values[KEY_DESIGN_FOR] = input_dictionary[KEY_DESIGN_FOR]
-
-        design_tab_content = []
-        t1 = (KEY_DESIGN_FOR, KEY_DISP_DESIGN_FOR, TYPE_COMBOBOX,
-              ['Tension', 'Compression'], values[KEY_DESIGN_FOR])
-        design_tab_content.append(t1)
-        return design_tab_content
+        return []
 
     def detailing_values(self, input_dictionary):
         values = {
@@ -584,8 +571,8 @@ class ButtJointWelded(MomentConnection):
 
                     if option[2] == TYPE_TEXTBOX and option[0] == KEY_AXIAL_FORCE:
 
-                        if float(design_dictionary[option[0]]) <= 0.0:
-                            error = "Input value for Axial Force must be a positive value."
+                        if math.isclose(float(design_dictionary[option[0]]), 0.0, abs_tol=1e-9):
+                            error = "Input value for Axial Force must be non-zero."
                             all_errors.append(error)
                         else:
                             flag2 = True
@@ -630,11 +617,17 @@ class ButtJointWelded(MomentConnection):
         # self.plate_thickness = [3,4,6,8,10,12,14,16,20,22,24,25,26,28,30,32,36,40,45,50,56,63,80]
         self.main_material = design_dictionary[KEY_MATERIAL]
         # Design mode: default to Tension if not provided
-        self.design_for = design_dictionary.get(KEY_DESIGN_FOR, 'Tension')
+        # self.design_for = design_dictionary.get(KEY_DESIGN_FOR, 'Tension')
         # Axial force: prefer KEY_AXIAL_FORCE, fallback to KEY_AXIAL, then KEY_TENSILE_FORCE
         axial_kN_str = design_dictionary.get(KEY_AXIAL_FORCE,
                                              design_dictionary.get(KEY_AXIAL,
                                                                    design_dictionary.get(KEY_TENSILE_FORCE, 0)))
+        
+        if float(axial_kN_str) < 0:
+            self.design_for = 'Compression'
+        else:
+            self.design_for = 'Tension'
+
         self.axial_force = abs(float(axial_kN_str)) * \
             1000  # N, always positive magnitude
         # Maintain backward compatibility: many methods use tensile_force name

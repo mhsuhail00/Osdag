@@ -401,7 +401,7 @@ WELD_SIZES = [3, 5, 6, 10, 12]
 KEY_DESIGN_FOR = 'Design.For'
 KEY_DISP_DESIGN_FOR = 'Design For'
 KEY_AXIAL_FORCE = 'Load.Axial.Force'  # If not using existing KEY_AXIAL
-KEY_DISP_AXIAL_FORCE = 'Axial Force (kN)'
+KEY_DISP_AXIAL_FORCE = 'Axial Force (kN) (+/- for T/C)'
 
 # MADE THIS t.s.
 KEY_DISP_BUTTJOINTWELDED = 'Butt Joint Welded Connection'
