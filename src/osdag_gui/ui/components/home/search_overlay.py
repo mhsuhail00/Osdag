@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, QPoint, QPropertyAnimation, QEasingCurve, QTimer, QEvent, QSize
 from PySide6.QtGui import QCursor, QPainterPath, QRegion, QIcon
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 from osdag_gui.data.database.database_config import *
 from osdag_gui.data.ui_data import Data
 
@@ -28,7 +29,7 @@ class SearchResultItem(QFrame):
         self.is_expanded = False
         
         if item_type==KEY_SEARCH_MODULE:
-            self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            self.setCursor(pointing_hand_cursor())
         
         self.setupUI()
     
@@ -116,7 +117,7 @@ class SearchResultItem(QFrame):
             # Style buttons
             for btn in [self.generate_btn, self.download_btn, self.open_btn]:
                 btn.setFixedHeight(25)
-                btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                btn.setCursor(pointing_hand_cursor())
                 btn.setObjectName("search_result_proj_btn")
 
             actions_layout.addWidget(self.generate_btn)

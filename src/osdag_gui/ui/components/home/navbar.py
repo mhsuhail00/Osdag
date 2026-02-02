@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QFont, QCursor, QIcon, QPainter, QColor
 from PySide6.QtCore import Qt, QSize, QEvent, Signal
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 from PySide6.QtSvgWidgets import QSvgWidget
 
 from osdag_gui.__config__ import VERSION
@@ -19,7 +20,7 @@ class CustomButton(QPushButton):
         self.theme = QApplication.instance().theme_manager
         self.group = group
         self.is_clicked = False
-        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.setCursor(pointing_hand_cursor())
         self.setFocusPolicy(Qt.NoFocus)
 
         self.default_icon = QIcon(icon_path_default)
@@ -128,13 +129,13 @@ class VerticalMenuBar(QWidget):
                 btn.setDisabled(True)
                 btn.setObjectName("navbar_button_under_dev")
                 btn.setToolTip("Under Development")
-                btn.setCursor(Qt.CursorShape.ForbiddenCursor)
+                btn.setCursor(QCursor(Qt.CursorShape.ForbiddenCursor))
             else:
                 btn = CustomButton("  " + name, icon[0], icon[0], icon[1], group=self.button_group)
                 btn.setObjectName("navbar_button")
             btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding) # Make buttons expand vertically
             btn.clicked.connect(lambda _,label=name, data=data.get(name): self._on_nav_button_clicked(data, label))
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setCursor(pointing_hand_cursor())
             self.button_group.append(btn)
             self.main_layout.addWidget(btn)
 

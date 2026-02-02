@@ -10,7 +10,8 @@ from PySide6.QtWidgets import (
     QGraphicsDropShadowEffect
 )
 from PySide6.QtCore import Qt, QSize, Signal, QPropertyAnimation, QEasingCurve, QThread
-from PySide6.QtGui import QIcon, QKeySequence, QColor, QFont, QShortcut, QFontMetrics
+from PySide6.QtGui import QIcon, QKeySequence, QColor, QFont, QShortcut, QFontMetrics, QCursor
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 from PySide6.QtSvgWidgets import QSvgWidget
 
 import osdag_gui.resources.resources_rc
@@ -258,7 +259,7 @@ class ProjectItem(QFrame):
         # GUARANTEED full visibility styling
         for btn in [self.generate_btn, self.download_btn, self.open_btn]:
             btn.setFixedHeight(25)  # Slightly smaller
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setCursor(pointing_hand_cursor())
             btn.setObjectName("recent_proj_btn")
         
         actions_layout.addWidget(self.generate_btn)
@@ -321,11 +322,11 @@ class ModuleItem(QFrame):
         self.selected = False
     
     def enterEvent(self, event):
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setCursor(pointing_hand_cursor())
         super().enterEvent(event)
     
     def leaveEvent(self, event):
-        self.setCursor(Qt.CursorShape.ArrowCursor)
+        self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
         super().leaveEvent(event)
 
     def set_selected(self, selected):
@@ -388,7 +389,7 @@ class ModuleItem(QFrame):
     # Mouse Press Event
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self.setCursor(Qt.CursorShape.ArrowCursor)
+            self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
             self.openModule.emit(self.module_data.get(MODULE_KEY))
         return super().mousePressEvent(event)
 

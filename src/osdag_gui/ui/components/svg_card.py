@@ -8,14 +8,15 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtCore import Qt, Signal, QEvent, QPropertyAnimation, QEasingCurve
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QCursor
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 
 class ClickableLabel(QLabel):
     clicked = Signal(str)
 
     def __init__(self, text="", parent=None):
         super().__init__(text, parent)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setCursor(pointing_hand_cursor())
         self._id = text
 
     def mousePressEvent(self, event):
@@ -102,7 +103,7 @@ class SvgCard(QFrame):
             self.open_label.style().polish(self)
             
         if event.type() == QEvent.Enter:
-            self.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.setCursor(pointing_hand_cursor())
             if not self.is_selected:
                 self.setProperty("state", "hover")
                 self.style().unpolish(self)
@@ -116,7 +117,7 @@ class SvgCard(QFrame):
             self.open_button_animation.start()
             self.open_label_wrapper.setMinimumHeight(0)
         elif event.type() == QEvent.Leave:
-            self.setCursor(Qt.CursorShape.ArrowCursor)
+            self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
             if not self.is_selected:
                 self.setProperty("state", "default")
                 self.style().unpolish(self)

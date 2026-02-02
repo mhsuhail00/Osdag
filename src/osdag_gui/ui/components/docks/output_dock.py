@@ -10,6 +10,8 @@ from PySide6.QtWidgets import (
     QFileDialog
 )
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
+from PySide6.QtGui import QCursor
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 
 from osdag_core.texlive.Design_wrapper import init_display as init_display_off_screen
 
@@ -116,7 +118,7 @@ class OutputDock(QWidget):
 
         self.toggle_btn = QPushButton("❯")  # Show state initially
         self.toggle_btn.setFixedSize(6, 60)
-        self.toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.toggle_btn.setCursor(pointing_hand_cursor())
         self.toggle_btn.setObjectName("toggle_strip_button")
         self.toggle_btn.setToolTip("Show panel")
 
@@ -264,7 +266,7 @@ class OutputDock(QWidget):
                 right.setFixedWidth(150)
                 # Add size policy
                 right.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-                right.setCursor(Qt.CursorShape.PointingHandCursor)
+                right.setCursor(pointing_hand_cursor())
                 spacing_button_list.append(field)
                 right.setObjectName(field[0])
                 right.setDisabled(True)

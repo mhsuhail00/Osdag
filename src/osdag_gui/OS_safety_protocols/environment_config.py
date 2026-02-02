@@ -88,11 +88,56 @@ def setup_environment() -> None:
     os.environ.setdefault("PYTHONOCC_DISPLAY_BACKEND", "pyside6")
 
 
+def _get_system_cursor_theme() -> tuple:
+    """
+    Detect the system cursor theme on Linux.
+    
+    Returns:
+        Tuple of (theme_name, cursor_size) or (None, None) if detection fails
+    """
+    theme = None
+    size = None
+    
+    # Try gsettings (GNOME/GTK)
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["gsettings", "get", "org.gnome.desktop.interface", "cursor-theme"],
+            capture_output=True, text=True, timeout=2
+        )
+        if result.returncode == 0:
+            theme = result.stdout.strip().strip("'")
+        
+        result = subprocess.run(
+            ["gsettings", "get", "org.gnome.desktop.interface", "cursor-size"],
+            capture_output=True, text=True, timeout=2
+        )
+        if result.returncode == 0:
+            size = result.stdout.strip()
+    except Exception:
+        pass
+    
+    # Fallback to environment variables or defaults
+    if not theme:
+        theme = os.environ.get("XCURSOR_THEME", "default")
+    if not size:
+        size = os.environ.get("XCURSOR_SIZE", "24")
+    
+    return theme, size
+
+
 def _setup_linux_environment() -> None:
     """Configure environment for Linux systems."""
     # Use X11/xcb for display
     if "DISPLAY" in os.environ:
         os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
+    
+    # Configure cursor theme - Qt/xcb doesn't always inherit system cursor theme
+    cursor_theme, cursor_size = _get_system_cursor_theme()
+    if cursor_theme:
+        os.environ.setdefault("XCURSOR_THEME", cursor_theme)
+    if cursor_size:
+        os.environ.setdefault("XCURSOR_SIZE", cursor_size)
     
     # Qt OpenGL settings
     os.environ.setdefault("QT_OPENGL", "desktop")

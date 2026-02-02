@@ -21,6 +21,7 @@ from osdag_gui.ui.components.home.navbar import VerticalMenuBar
 from osdag_gui.ui.components.custom_buttons import MenuButton
 from osdag_gui.ui.components.home.top_right_buttons import TopButton, DropDownButton
 from osdag_gui.ui.components.home.home_widget import HomeWidget
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 
 # --- Internet Connectivity Indicator Button ---
 class InternetConnectionIndicator(TopButton):
@@ -61,7 +62,7 @@ class ThemeToggleButton(QPushButton):
         self.theme = parent.theme_manager
         self.setFixedSize(50, 50)
         self.setObjectName("themeToggle")
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setCursor(pointing_hand_cursor())
         self.update_icon()
         # Disabled Toggle Theme
         # self.clicked.connect(self._toggle_theme)

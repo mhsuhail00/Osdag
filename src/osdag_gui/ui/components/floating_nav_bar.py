@@ -4,6 +4,7 @@ Provides quick access to modules and emits tab open signals.
 """
 import osdag_gui.resources.resources_rc
 from osdag_gui.data.ui_data import Data
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QToolTip, QApplication, QSizePolicy
@@ -46,7 +47,7 @@ class SidebarIconButton(QPushButton):
             self.setIcon(self.default_icon)
         else:
             self.setIcon(self.dark_icon)
-        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.setCursor(pointing_hand_cursor())
         self.setFocusPolicy(Qt.NoFocus)
 
         self.set_default_style()

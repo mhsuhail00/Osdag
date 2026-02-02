@@ -10,7 +10,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtWidgets import QMessageBox, QDialog, QGridLayout, QListView
 from PySide6.QtCore import Qt, QRegularExpression, QCoreApplication, QEvent, QTimer, QPoint
 from PySide6.QtGui import (QPixmap, QBrush, QColor, QDoubleValidator,
-        QRegularExpressionValidator, QIntValidator, QIcon)
+        QRegularExpressionValidator, QIntValidator, QIcon, QCursor)
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 from osdag_gui.OS_safety_protocols import get_cleanup_coordinator
 
 from osdag_gui.ui.components.additional_inputs_button import AdditionalInputsButton
@@ -117,7 +118,7 @@ class InputDock(QWidget):
         self.toggle_btn = QPushButton("❮")
         self.toggle_btn.setObjectName("toggle_strip_button")
         self.toggle_btn.setFixedSize(6, 60)
-        self.toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.toggle_btn.setCursor(pointing_hand_cursor())
         self.toggle_btn.setToolTip("Hide panel")
         self.toggle_btn.clicked.connect(self.toggle_input_dock)
         toggle_layout.addStretch()
@@ -189,7 +190,7 @@ class InputDock(QWidget):
         # lock-unlock button
         self.state_locked = False    # Open by default
         self.lock_btn = QPushButton()
-        self.lock_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.lock_btn.setCursor(pointing_hand_cursor())
         self.lock_btn.setObjectName("lock_btn")
         self.lock_btn.setCheckable(True)
         self.lock_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)

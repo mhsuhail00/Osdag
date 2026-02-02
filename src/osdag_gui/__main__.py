@@ -222,10 +222,14 @@ def gui():
         # Parallely load the MainWindow
         app.main_window = MainWindow()
         # To ensure no Jittering on startup
-        QTimer.singleShot(50, lambda: app.main_window.show())
+        def show_final():
+            app.main_window.show()
+            app.setQuitOnLastWindowClosed(True)
+        QTimer.singleShot(50, show_final)
         app.setWindowIcon(QIcon(":/images/osdag_logo.png"))
 
     splash = LaunchScreenPopup(on_finish=show_main_window)
+    app.setQuitOnLastWindowClosed(False)
     splash.show()   
     sys.exit(app.exec())
 

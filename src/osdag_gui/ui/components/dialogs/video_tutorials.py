@@ -2,6 +2,7 @@ import sys
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QWidget
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QCursor
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 
 from osdag_gui.ui.components.dialogs.custom_titlebar import CustomTitleBar
 import osdag_gui.resources.resources_rc
@@ -60,7 +61,7 @@ class TutorialsDialog(QDialog):
             padding: 2px 0px;
         """)
         self.youtubeLink.setOpenExternalLinks(True)
-        self.youtubeLink.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.youtubeLink.setCursor(pointing_hand_cursor())
         contentLayout.addWidget(self.youtubeLink)
 
         # Fossee link
@@ -70,7 +71,7 @@ class TutorialsDialog(QDialog):
             padding: 2px 0px;
         """)
         self.fosseeLink.setOpenExternalLinks(True)
-        self.fosseeLink.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.fosseeLink.setCursor(pointing_hand_cursor())
         contentLayout.addWidget(self.fosseeLink)
 
         mainLayout.addWidget(contentWidget)

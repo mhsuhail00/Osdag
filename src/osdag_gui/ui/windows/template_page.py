@@ -8,7 +8,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtCore import Qt, QRect, QPropertyAnimation, QEvent, Signal, QTimer
-from PySide6.QtGui import QKeySequence, QAction, QColor, QBrush, QPixmap
+from PySide6.QtGui import QKeySequence, QAction, QColor, QBrush, QPixmap, QCursor
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 
 from osdag_gui.ui.components.floating_nav_bar import SidebarWidget
 from osdag_gui.ui.components.docks.input_dock import InputDock
@@ -273,7 +274,7 @@ class CustomWindow(QWidget):
         # ---- Zoom In Button ----
         self.zoom_in_btn = QPushButton("+", self.cad_widget)
         self.zoom_in_btn.setFixedSize(self._zoom_btn_size, self._zoom_btn_size)
-        self.zoom_in_btn.setCursor(Qt.PointingHandCursor)
+        self.zoom_in_btn.setCursor(pointing_hand_cursor())
         self.zoom_in_btn.setToolTip("Zoom In (Ctrl+I)")
         self.zoom_in_btn.clicked.connect(lambda: self.display.ZoomFactor(1.1))
         self._style_zoom_button(self.zoom_in_btn)
@@ -281,7 +282,7 @@ class CustomWindow(QWidget):
         # ---- Zoom Out Button ----
         self.zoom_out_btn = QPushButton("-", self.cad_widget)
         self.zoom_out_btn.setFixedSize(self._zoom_btn_size, self._zoom_btn_size)
-        self.zoom_out_btn.setCursor(Qt.PointingHandCursor)
+        self.zoom_out_btn.setCursor(pointing_hand_cursor())
         self.zoom_out_btn.setToolTip("Zoom Out (Ctrl+O)")
         self.zoom_out_btn.clicked.connect(lambda: self.display.ZoomFactor(1 / 1.1))
         self._style_zoom_button(self.zoom_out_btn)
@@ -517,7 +518,7 @@ class CustomWindow(QWidget):
             clicked = Signal()  # Define a custom clicked signal
             def __init__(self, parent=None):
                 super().__init__(parent)
-                self.setCursor(Qt.CursorShape.PointingHandCursor)
+                self.setCursor(pointing_hand_cursor())
 
             def mousePressEvent(self, event):
                 if event.button() == Qt.MouseButton.LeftButton:
@@ -2286,7 +2287,7 @@ class InputDockIndicator(QWidget):
 
         self.toggle_btn = QPushButton("❯")  # Right-pointing chevron for input dock
         self.toggle_btn.setFixedSize(6, 60)
-        self.toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.toggle_btn.setCursor(pointing_hand_cursor())
         self.toggle_btn.clicked.connect(self.parent.input_dock_toggle)
         self.toggle_btn.setToolTip("Show input panel")
         self.toggle_btn.setObjectName("toggle_strip_button")
@@ -2324,7 +2325,7 @@ class OutputDockIndicator(QWidget):
         toggle_layout.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
 
         self.toggle_btn = QPushButton("❮")  # Show state initially
-        self.toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.toggle_btn.setCursor(pointing_hand_cursor())
         self.toggle_btn.setFixedSize(6, 60)
         self.toggle_btn.clicked.connect(self.parent.output_dock_toggle)
         self.toggle_btn.setToolTip("Show panel")

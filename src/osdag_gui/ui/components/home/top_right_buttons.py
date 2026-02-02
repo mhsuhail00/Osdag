@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSize, QPoint, QPropertyAnimation, QEasingCurve, QTimer, Signal
 from PySide6.QtGui import QIcon, QAction
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 from osdag_gui.ui.components.dialogs.video_tutorials import TutorialsDialog
 from osdag_gui.ui.components.dialogs.ask_questions import AskQuestions
 from osdag_gui.ui.components.dialogs.about_osdag import AboutOsdagDialog
@@ -53,7 +54,7 @@ class TopButton(QPushButton):
         self.setText("")
         # Apply the default style sheet initially
         self.apply_default_style()
-        self.setCursor(Qt.CursorShape.PointingHandCursor) # Indicate clickable element
+        self.setCursor(pointing_hand_cursor()) # Indicate clickable element
         
         # Enable hover tracking for enterEvent and leaveEvent
         self.setAttribute(Qt.WA_Hover, True)
@@ -203,7 +204,7 @@ class TopButton1(QPushButton):
         self.setText("")
         # Apply the default style sheet initially
         self.apply_default_style()
-        self.setCursor(Qt.CursorShape.PointingHandCursor) # Indicate clickable element
+        self.setCursor(pointing_hand_cursor()) # Indicate clickable element
         
         # Enable hover tracking for enterEvent and leaveEvent
         self.setAttribute(Qt.WA_Hover, True)
