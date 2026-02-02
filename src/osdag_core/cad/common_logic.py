@@ -4155,41 +4155,52 @@ class CommonDesignLogic(object):
 
             # ---------------- SIMPLY SUPPORTED BEAM ----------------
             elif self.mainmodule == 'Flexure Member':
-                obj = self.FObj  # dict
+                obj = self.FObj
 
-                if self.component == "Beam":
-                    final_model = obj.get('beam')
+                # CASE 1: Legacy / broken return (TopoDS_Shape)
+                if isinstance(obj, TopoDS_Shape):
+                    # Save 3D → beam only (supports excluded)
+                    final_model = obj
 
-                elif self.component in ("Support", "Connector"):
-                    cadlist = [
-                        obj.get('support_tri'),
-                        obj.get('support_cyl'),
-                        obj.get('support_block')
-                    ]
+                # CASE 2: Correct dict-based return
+                elif isinstance(obj, dict):
+                    if self.component == "Beam":
+                        final_model = obj.get('beam')
 
-                else:
-                    cadlist = [
-                        obj.get('beam'),
-                        obj.get('support_tri'),
-                        obj.get('support_cyl'),
-                        obj.get('support_block')
-                    ]
+                    elif self.component in ("Support", "Connector"):
+                        # Viewer usage only
+                        cadlist = [
+                            obj.get('support_tri'),
+                            obj.get('support_cyl'),
+                            obj.get('support_block')
+                        ]
 
-            # ---------------- CANTILEVER BEAM ----------------
+                    else:
+                        # Save 3D → beam ONLY (no supports)
+                        final_model = obj.get('beam')
+
+
+            # CANTILEVER BEAM 
             elif self.mainmodule == 'Flexural Members - Cantilever':
-                obj = self.FObj  # dict
+                obj = self.FObj
 
-                if self.component == "Beam":
-                    final_model = obj.get('beam')
+                # CASE 1: Legacy / fused solid
+                if isinstance(obj, TopoDS_Shape):
+                    final_model = obj
 
-                elif self.component in ("Support", "Connector"):
-                    final_model = obj.get('support_block')
+                # CASE 2: Dict-based CAD
+                elif isinstance(obj, dict):
+                    if self.component == "Beam":
+                        final_model = obj.get('beam')
 
-                else:
-                    cadlist = [
-                        obj.get('beam'),
-                        obj.get('support_block')
-                    ]
+                    elif self.component in ("Support", "Connector"):
+                        # Viewer only
+                        final_model = obj.get('support_block')
+
+                    else:
+                        # Save 3D → beam ONLY
+                        final_model = obj.get('beam')
+
 
             # ---------------- PLATE GIRDER ----------------
             elif self.mainmodule == 'PLATE GIRDER':
