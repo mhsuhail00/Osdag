@@ -243,36 +243,38 @@ class CustomViewer3d(qtViewer3d):
         """
         Clean up all internal state before displaying a new model.
         This prevents memory corruption from stale OCC object references.
+        
+        Uses IsDisplayed/IsHilighted checks for OS-independent safety:
+        - Windows requires explicit Remove before EraseAll for AIS_ViewCube
+        - Linux crashes with double-free if Remove is called on already-freed objects
+        - Checking first avoids both issues.
         """
-        # Reset view cube state
-        if hasattr(self, 'view_cube') and self.view_cube:
-            # context.Remove(self.view_cube) is REDUNDANT and DANGEROUS here.
-            # CleanupCoordinator calls EraseAll() immediately after this, which safely handles removal.
-            # Explicit removal here can cause double-free/heap corruption if OCC wrappers 
-            # and C++ objects get out of sync during destruction.
-            # try:
-            #     # Try to remove from context if possible
-            #     if self.context:
-            #         try:
-            #             self.context.Remove(self.view_cube, False)
-            #         except Exception:
-            #             pass  # May already be removed by EraseAll
-            # except Exception:
-            #     pass
+        # Reset view cube state - use IsDisplayed check for OS-independent safety
+        if hasattr(self, 'view_cube') and self.view_cube and self.context:
+            try:
+                # Only remove if confirmed still displayed - prevents double-free
+                if self.context.IsDisplayed(self.view_cube):
+                    self.context.Remove(self.view_cube, False)
+            except Exception:
+                pass  # Object may already be removed or context invalid
+            finally:
+                self.view_cube = None
+        elif hasattr(self, 'view_cube'):
             self.view_cube = None
         
         # Reset View Cube interaction state
         self.view_cube_active = False
         self.is_interacting_with_cube = False
         
-        # Clear highlighted objects list
+        # Clear highlighted objects list - use IsHilighted check for OS-independent safety
         if self.current_highlighted_ais_list and self.context:
-            # Unhilight is also handled by EraseAll/RemoveAll or unnecessary during destruction
-            # for obj in self.current_highlighted_ais_list:
-            #     try:
-            #         self.context.Unhilight(obj, False)
-            #     except Exception:
-            #         pass
+            for obj in self.current_highlighted_ais_list:
+                try:
+                    # Only unhilight if confirmed still highlighted
+                    if self.context.IsHilighted(obj):
+                        self.context.Unhilight(obj, False)
+                except Exception:
+                    pass  # Object may already be unhighlighted or invalid
             self.current_highlighted_ais_list = []
         elif self.current_highlighted_ais_list:
             # Context not available, just clear the list
