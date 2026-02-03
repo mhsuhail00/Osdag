@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QWidget, QLabel, QToolButton, QHBoxLayout, QSizePolicy, QVBoxLayout
 from PySide6.QtCore import Qt, QPoint, QEvent
 from PySide6.QtGui import QMouseEvent, QFont
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 
 # This return a string 'Cancel' when the close button is clicked.
 # This also returns the name of button that is clicked.
@@ -40,6 +41,7 @@ class CustomTitleBar(QWidget):
             self.btn_minimize.setToolTip("Minimize")
             self.btn_minimize.setText("–")
             self.btn_minimize.setFixedSize(46, 32)
+            self.btn_minimize.setCursor(pointing_hand_cursor())
             self.btn_minimize.clicked.connect(self._minimize_parent)
 
         # Maximize/Restore button (optional)
@@ -50,6 +52,7 @@ class CustomTitleBar(QWidget):
             self.btn_max_restore.setToolTip("Maximize")
             self.btn_max_restore.setText("□")
             self.btn_max_restore.setFixedSize(46, 32)
+            self.btn_max_restore.setCursor(pointing_hand_cursor())
             self.btn_max_restore.clicked.connect(self._toggle_max_restore)
 
         # Close button
@@ -58,6 +61,7 @@ class CustomTitleBar(QWidget):
         self.btn_close.setToolTip("Close")
         self.btn_close.setText("✕")  # Better multiplication symbol
         self.btn_close.setFixedSize(46, 32)
+        self.btn_close.setCursor(pointing_hand_cursor())
         self.btn_close.clicked.connect(self._close_parent)
 
         # Title bar layout

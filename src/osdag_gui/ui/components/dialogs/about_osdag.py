@@ -7,8 +7,17 @@ from PySide6.QtGui import QIcon
 from PySide6.QtSvgWidgets import QSvgWidget
 from osdag_gui.ui.components.dialogs.custom_titlebar import CustomTitleBar
 import osdag_gui.resources.resources_rc
+from osdag_gui.ui.utils.custom_cursors import pointing_hand_cursor
 import markdown, os
 from importlib import resources
+
+class CustomTextBrowser(QTextBrowser):
+    """Custom TextBrowser that uses the correct pointing hand cursor on links."""
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        # Check if hovering over a link
+        if self.anchorAt(event.pos()):
+            self.viewport().setCursor(pointing_hand_cursor())
 
 class AboutOsdagDialog(QDialog):
     """Modern About dialog for Osdag with tabbed interface."""
@@ -40,6 +49,7 @@ class AboutOsdagDialog(QDialog):
         # Tab widget (no header section now)
         self.tabs = QTabWidget()
         self.tabs.setObjectName("aboutTabs")
+        self.tabs.tabBar().setCursor(pointing_hand_cursor())
         main_layout.addWidget(self.tabs, 1)
 
         # Add tabs
@@ -67,6 +77,7 @@ class AboutOsdagDialog(QDialog):
         ok_btn = QPushButton("OK")
         ok_btn.setMinimumWidth(80)
         ok_btn.setDefault(True)
+        ok_btn.setCursor(pointing_hand_cursor())
         ok_btn.clicked.connect(self.accept)
         footer_layout.addWidget(ok_btn)
         
@@ -88,7 +99,7 @@ class AboutOsdagDialog(QDialog):
         # Add some spacing after logo
         layout.addSpacing(10)
 
-        browser = QTextBrowser()
+        browser = CustomTextBrowser()
         browser.setOpenExternalLinks(True)
         browser.setHtml(self._get_about_html())
         
@@ -101,7 +112,7 @@ class AboutOsdagDialog(QDialog):
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(15, 15, 15, 15)
 
-        browser = QTextBrowser()
+        browser = CustomTextBrowser()
         browser.setOpenExternalLinks(True)
 
         md_text = resources.files("osdag_core.data.doc").joinpath("CONTRIBUTORS.MD").read_text(encoding="utf-8")
@@ -119,14 +130,13 @@ class AboutOsdagDialog(QDialog):
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(15, 15, 15, 15)
 
-        browser = QTextBrowser()
+        browser = CustomTextBrowser()
         browser.setOpenExternalLinks(True)
         browser.setHtml("""
             <section>
                 <p>
                     Osdag is licensed under the terms of the LGPL v3 license, as stated below.
                 </p>
-
                 <p>
                     Osdag is a free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, version 3 of the License.
                 </p>
@@ -206,11 +216,11 @@ additional permissions listed below.
     modified version:
 
     a) under this License, provided that you make a good faith effort to ensure that, in
-       the event an Application does not supply the function or data, the facility still
-       operates, and performs whatever part of its purpose remains meaningful, or
+        the event an Application does not supply the function or data, the facility still
+        operates, and performs whatever part of its purpose remains meaningful, or
 
     b) under the GNU GPL, with none of the additional permissions of this License
-       applicable to that copy.
+        applicable to that copy.
 
 3. Object Code Incorporating Material from Library Header Files.
 
@@ -221,7 +231,7 @@ additional permissions listed below.
     and templates (ten or fewer lines in length), you do both of the following:
 
     a) Give prominent notice with each copy of the object code that the Library is used
-       in it and that the Library and its use are covered by this License.
+        in it and that the Library and its use are covered by this License.
 
     b) Accompany the object code with a copy of the GNU GPL and this license document.
 
@@ -233,13 +243,13 @@ additional permissions listed below.
     also do each of the following:
 
     a) Give prominent notice with each copy of the Combined Work that the Library is used
-       in it and that the Library and its use are covered by this License.
+        in it and that the Library and its use are covered by this License.
 
     b) Accompany the Combined Work with a copy of the GNU GPL and this license document.
 
     c) For a Combined Work that displays copyright notices during execution, include the
-       copyright notice for the Library among these notices, as well as a reference directing
-       the user to the copies of the GNU GPL and this license document.
+        copyright notice for the Library among these notices, as well as a reference directing
+        the user to the copies of the GNU GPL and this license document.
 
     d) Do one of the following:
 
@@ -268,12 +278,12 @@ additional permissions listed below.
     your choice, if you do both of the following:
 
     a) Accompany the combined library with a copy of the same work based on the Library,
-       uncombined with any other library facilities, conveyed under the terms of this
-       License.
+        uncombined with any other library facilities, conveyed under the terms of this
+        License.
 
     b) Give prominent notice with the combined library that part of it is a work based on
-       the Library, and explaining where to find the accompanying uncombined form of the same
-       work.
+        the Library, and explaining where to find the accompanying uncombined form of the same
+        work.
 
 6. Revised Versions of the GNU Lesser General Public License.
 
@@ -306,7 +316,7 @@ additional permissions listed below.
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(20)
 
-        browser = QTextBrowser()
+        browser = CustomTextBrowser()
         browser.setOpenExternalLinks(True)
         browser.setHtml("""
         <h2 style="color: #91b014; text-align: left;">Acknowledgements</h2>
@@ -372,7 +382,7 @@ additional permissions listed below.
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(15, 15, 15, 15)
 
-        browser = QTextBrowser()
+        browser = CustomTextBrowser()
         browser.setOpenExternalLinks(True)
         browser.setHtml("""
             <section>
@@ -401,7 +411,7 @@ additional permissions listed below.
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(15, 15, 15, 15)
 
-        browser = QTextBrowser()
+        browser = CustomTextBrowser()
         browser.setOpenExternalLinks(True)
         browser.setHtml("""
             <section>
