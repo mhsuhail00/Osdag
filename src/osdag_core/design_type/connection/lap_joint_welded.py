@@ -396,6 +396,59 @@ class LapJointWelded(MomentConnection):
         self.logger.info(": Design Approach: IS 800:2007 Clause 10.5")
         self.utilization_ratios = {}
 
+        weld_size_input = design_dictionary[KEY_WELD_SIZE]
+        
+        # Check if user selected "All" - iterate through valid sizes
+        if isinstance(weld_size_input, str) and weld_size_input.lower() == 'all':
+            # Get valid weld sizes based on plate thickness
+            plate1_thk = float(design_dictionary[KEY_PLATE1_THICKNESS])
+            plate2_thk = float(design_dictionary[KEY_PLATE2_THICKNESS])
+            Tmin = min(plate1_thk, plate2_thk)
+            s_min = IS800_2007.cl_10_5_2_3_min_weld_size(plate1_thk, plate2_thk)
+            s_max = Tmin - 1.5 if Tmin >= 10 else Tmin
+            
+            valid_sizes = [s for s in ALL_WELD_SIZES if s_min <= s <= s_max]
+            
+            if not valid_sizes:
+                self.logger.error(": No valid weld sizes available for given plate thicknesses.")
+                self.design_status = False
+                return
+            
+            self.logger.info(f": Valid weld sizes for iteration: {valid_sizes}")
+            
+            # Iterate through valid sizes (smallest to largest) until one passes
+            for candidate_size in valid_sizes:
+                self.logger.info(f": Trying weld size = {candidate_size} mm")
+                
+                # Temporarily set the weld size for this iteration
+                temp_dict = design_dictionary.copy()
+                temp_dict[KEY_WELD_SIZE] = str(candidate_size)
+                
+                if not self.weld_size_check(temp_dict):
+                    continue  # This size didn't pass basic geometric check
+                
+                self.calculate_weld_strength(temp_dict)
+                
+                if not self.calculate_weld_length():
+                    self.logger.info(f": Weld size {candidate_size} mm failed length check. Trying next size...")
+                    continue  # Weld length exceeded max limit, try next size
+                
+                if not self.check_long_joint():
+                    self.logger.info(f": Weld size {candidate_size} mm failed long joint check. Trying next size...")
+                    continue  # Modified weld length exceeded max limit, try next size
+                
+                # This size passed all weld checks
+                self.logger.info(f": Weld size {candidate_size} mm passed all checks!")
+                self.check_base_metal_strength(temp_dict)
+                self.calculate_final_utilization_ratio()
+                return  # Success - exit the function
+            
+            # If we reach here, no size worked
+            self.logger.error(": No suitable weld size found. Design failed.")
+            self.design_status = False
+            return
+        
+        # Original logic for specific weld size selection
         if not self.weld_size_check(design_dictionary):
             return
 
