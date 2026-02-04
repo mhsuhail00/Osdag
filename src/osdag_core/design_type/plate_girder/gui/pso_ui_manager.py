@@ -133,6 +133,11 @@ class PSOUIManager:
             # Hide CAD widget completely
             self.parent.cad_widget.hide()
             
+            # Hide CAD component checkboxes during PSO
+            if hasattr(self.parent, 'cad_comp_widget') and self.parent.cad_comp_widget:
+                self._cad_comp_was_visible = self.parent.cad_comp_widget.isVisible()
+                self.parent.cad_comp_widget.hide()
+            
             # Remove cad_widget from splitter temporarily
             self.parent.cad_widget.setParent(None)
             
@@ -167,10 +172,15 @@ class PSOUIManager:
             def viz_callback(depth, ur, weight, iteration, particle_idx, position=None, variables=None, lb=None, ub=None):
                 if self.pso_viz:
                     self.pso_viz.add_particle_data(depth, ur, weight, iteration, particle_idx, position, variables, lb, ub)
-                    # Only process events once per iteration (not per particle!)
-                    # Use safe_processEvents() to prevent AIS context race conditions
+                    # Update graph and cross-section once per iteration (not per particle)
+                    # Must manually flush buffer and update canvas since timer can't fire during sync optimization
                     if iteration != self._last_pso_iter:
                         self._last_pso_iter = iteration
+                        # Flush the particle data buffer
+                        self.pso_viz._flush_buffer()
+                        # Force synchronous canvas redraw (not draw_idle which may be deferred)
+                        self.pso_viz._update_canvas_immediate()
+                        # Process Qt events to actually render the update
                         safe_processEvents()
             
             self.parent.backend._viz_callback = viz_callback
@@ -189,9 +199,7 @@ class PSOUIManager:
         if hasattr(self.parent, 'input_dock'):
             self.parent.input_dock.setEnabled(False)
         
-        # Hide output dock during optimization
-        if hasattr(self.parent, 'output_dock'):
-            self.parent.output_dock.hide()
+        # Output dock stays visible throughout PSO - no hide/show needed
         
         # Run design SYNCHRONOUSLY on main thread (required for OpenGL safety)
         # The viz_callback includes processEvents() to update UI in real-time
@@ -202,10 +210,6 @@ class PSOUIManager:
         finally:
             if hasattr(self.parent, 'input_dock'):
                 self.parent.input_dock.setEnabled(True)
-        
-        # Show output dock after optimization
-        if hasattr(self.parent, 'output_dock'):
-            self.parent.output_dock.show()
         
         # CRITICAL: Sync final design data to visualizer (after adjustments like rounding)
         # This ensures the visualization shows the same values as the Output Dock
@@ -476,12 +480,11 @@ class PSOUIManager:
     def _restore_initial_layout(self):
         """Restore the initial horizontal splitter layout for Plate Girder module.
         
-        This ensures the input dock retains its original narrow width when
-        pressing Design multiple times. Only affects horizontal splitter,
-        not the vertical CAD/logs splitter.
+        This ensures proper splitter sizing when pressing Design.
+        Keeps all docks visible - PSO graph displays in central area without layout changes.
         """
         try:
-            # Show input dock with original width
+            # Ensure input dock is visible and enabled
             if hasattr(self.parent, 'input_dock') and self.parent.input_dock:
                 self.parent.input_dock.show()
                 self.parent.input_dock.setEnabled(True)
@@ -489,50 +492,22 @@ class PSOUIManager:
                 if hasattr(self.parent.input_dock, 'toggle_lock'):
                     self.parent.input_dock.toggle_lock(set_locked_state=False)
             
-            # Hide input dock indicator label
+            # Ensure output dock stays visible (no changes to layout)
+            if hasattr(self.parent, 'output_dock') and self.parent.output_dock:
+                self.parent.output_dock.show()
+            
+            # Hide dock indicator labels since docks are visible
             if hasattr(self.parent, 'input_dock_label'):
                 self.parent.input_dock_label.setVisible(False)
-            
-            # Hide output dock during PSO optimization
-            if hasattr(self.parent, 'output_dock') and self.parent.output_dock:
-                self.parent.output_dock.hide()
-            
-            # Show output dock indicator label
             if hasattr(self.parent, 'output_dock_label'):
-                self.parent.output_dock_label.setVisible(True)
+                self.parent.output_dock_label.setVisible(False)
             
-            # Restore splitter sizes: [input_dock, central, output_dock=0]
-            if hasattr(self.parent, 'splitter') and self.parent.splitter:
-                # Use stored default width or sizeHint
-                input_width = getattr(self.parent, '_input_dock_default_width', None)
-                if input_width is None:
-                    input_width = (
-                        self.parent.input_dock.sizeHint().width() 
-                        if self.parent.input_dock else 320
-                    )
-                
-                total_width = self.parent.splitter.width()
-                if total_width <= 0:
-                    total_width = self.parent.width()
-                
-                # Layout: [input_dock, central_widget, output_dock=0]
-                center_width = max(0, total_width - input_width)
-                target_sizes = [input_width, center_width, 0]
-                
-                self.parent.splitter.setSizes(target_sizes)
-                try:
-                    self.parent.splitter.refresh()
-                except Exception:
-                    pass
-                self.parent.splitter.update()
-            
-            # Update dock control icons
-            self.parent.input_dock_active = True
-            self.parent.output_dock_active = False
-            self.parent.update_docking_icons(input_is_active=True, output_is_active=False)
+            # NO splitter resizing - layout stays exactly as it is
+            # Graph just replaces CAD widget in the central area
             
         except Exception as e:
             print(f"[WARNING] Failed to restore initial layout: {e}")
+
     
     def on_pso_complete(self, data, success: bool):
         """Handle PSO optimization completion (legacy method).
