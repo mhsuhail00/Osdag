@@ -2140,8 +2140,8 @@ class Compression_bolted(Member):
             self.efficiency = round(self.load.axial_force * 1000 / min(bolt_value * n_bolts, plate_cap), 2)
             
             # Bolt Layout Update
-            self.plate.bolts_one_line = n_bolts
-            self.plate.bolt_line = 1
+            self.plate.bolts_one_line = 1
+            self.plate.bolt_line = n_bolts
             
             # Call status_pass (handles plate length check like tension_bolted)
             self.status_pass(design_dictionary)
