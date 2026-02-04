@@ -27,8 +27,9 @@ from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QApplication, QFrame,
-    QSizePolicy, QFileDialog
+    QSizePolicy, QFileDialog, QDialog
 )
+from osdag_gui.ui.components.dialogs.custom_titlebar import CustomTitleBar
 from PySide6.QtGui import QFont
 
 # Import safe_processEvents for thread-safe UI updates during CAD operations
@@ -204,15 +205,12 @@ class MatplotlibCanvas(FigureCanvas):
     """Two-Panel Visualization: 3D Cloud Plot + Cross-Section View."""
     
     def __init__(self, parent=None):
-        # Use smaller figsize to avoid demanding too much space
-        # The canvas will scale to fill available space
-        self.fig = Figure(figsize=(9, 5), dpi=80, facecolor='#ffffff')
+        # Larger figure for better visualization
+        self.fig = Figure(figsize=(12, 6.5), dpi=90, facecolor='#ffffff')
         super().__init__(self.fig)
         self.setParent(parent)
-        # Use Preferred policy to allow shrinking to fit available space
-        # This matches CAD widget behavior which doesn't demand minimum size
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.setMinimumSize(200, 150)  # Sensible minimum
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setMinimumSize(400, 300)
         self.updateGeometry()
         
         # Initialize Layout
@@ -220,11 +218,10 @@ class MatplotlibCanvas(FigureCanvas):
         
     def _setup_layout(self):
         """Create the 2-panel layout: 3D plot + Cross-section with tables at bottom."""
-        # GridSpec: Compact layout for smaller canvas (output dock visible)
-        # Left margin 0.08 ensures Weight (z-axis) label is visible
-        # Bottom margin 0.20 ensures table is visible
-        self.gs = self.fig.add_gridspec(1, 5, wspace=0.08, 
-                                        left=0.08, right=0.98, top=0.88, bottom=0.20)
+        # GridSpec: Optimized layout with better margins
+        # Increased bottom margin for info table
+        self.gs = self.fig.add_gridspec(1, 5, wspace=0.12, 
+                                        left=0.06, right=0.96, top=0.90, bottom=0.18)
         
         # 1. 3D Cloud Scatter Plot (Left - 60%)
         self.ax_3d = self.fig.add_subplot(self.gs[0, :3], projection='3d')
@@ -259,14 +256,14 @@ class MatplotlibCanvas(FigureCanvas):
         """Configure 3D axes appearance."""
         ax = self.ax_3d
         
-        # Title (smaller font for compact layout)
-        ax.set_title('3D Scatter Plot: Utilization Ratio vs Depth vs Weight', 
-                     fontsize=9, fontweight='bold', pad=8)
+        # Title (larger for better visibility)
+        ax.set_title('3D Scatter: Utilization Ratio vs Depth vs Weight', 
+                     fontsize=11, fontweight='bold', pad=10)
         
-        # Axis labels with units (compact)
-        ax.set_xlabel('Utilization Ratio', fontsize=8, labelpad=5)
-        ax.set_ylabel('Depth (mm)', fontsize=8, labelpad=5)
-        ax.set_zlabel('Weight (kg)', fontsize=8, labelpad=5)
+        # Axis labels with units (larger)
+        ax.set_xlabel('Utilization Ratio', fontsize=10, labelpad=6)
+        ax.set_ylabel('Depth (mm)', fontsize=10, labelpad=6)
+        ax.set_zlabel('Weight (kg)', fontsize=10, labelpad=6)
         
         # Set axis ranges from data
         ur_range = data.get('ur_range', [0, 2])
@@ -363,13 +360,13 @@ class MatplotlibCanvas(FigureCanvas):
             best_iter = data.get('best_iteration', 0)
             best_pid = data.get('best_particle_id', 0)
             
-        # Legend (moved to bottom of plot)
-        ax.legend(loc='upper right', fontsize=8, framealpha=0.9)
+        # Legend (larger for better visibility)
+        ax.legend(loc='upper right', fontsize=9, framealpha=0.9)
 
     def _setup_section_axes(self):
         """Configure cross-section view axes."""
         ax = self.ax_sect
-        ax.set_title('Best Cross-Section (I-Beam)', fontsize=9, fontweight='bold', pad=5)
+        ax.set_title('Best Cross-Section (I-Beam)', fontsize=11, fontweight='bold', pad=8)
         ax.set_aspect('equal')
         ax.axis('off')
 
@@ -493,17 +490,17 @@ class MatplotlibCanvas(FigureCanvas):
         # Get UR
         b_ur = best_pos[1] if best_pos else 0
         
-        # === SINGLE COMBINED TABLE (compact for smaller canvas) ===
+        # === SINGLE COMBINED TABLE (larger font for better readability) ===
         table_text = (
             f"Global Best │ Iter: {best_iter + 1} │ Particle: {best_pid + 1} │ "
             f"Weight: {best_weight:.1f} kg │ D: {D:.0f} mm │ B: {bf:.0f} mm │ "
             f"tw: {tw:.1f} mm │ tf: {tf:.1f} mm │"
         )
-        self.fig.text(0.50, 0.08, table_text, 
-                     fontsize=8, ha='center', va='top',
+        self.fig.text(0.50, 0.07, table_text, 
+                     fontsize=10, ha='center', va='top',
                      fontfamily='monospace', fontweight='bold',
-                     bbox=dict(boxstyle='round,pad=0.3', 
-                              facecolor='#fffef0', edgecolor='#ccc', alpha=0.95))
+                     bbox=dict(boxstyle='round,pad=0.4', 
+                              facecolor='#fffef0', edgecolor='#bbb', alpha=0.95))
 
     def cleanup(self):
         """Clean up matplotlib resources."""
@@ -513,14 +510,30 @@ class MatplotlibCanvas(FigureCanvas):
             pass
 
 
-class PSOVisualizerWidget(QWidget):
-    """Main PSO Visualizer Widget with 3D Cloud Plot + Cross-Section."""
+class PSOVisualizerWidget(QDialog):
+    """Main PSO Visualizer Widget with 3D Cloud Plot + Cross-Section.
+    
+    Displayed as a fixed-size popup window (not dockable).
+    Uses CustomTitleBar to match Osdag style.
+    """
     switch_to_cad = Signal()
+    closed = Signal()  # Emitted when the popup is closed
     
     def __init__(self, parent=None, max_iterations=100):
         super().__init__(parent)
-        print("DEBUG: Loading PSO Visualizer V3 (3D Cloud + Cross-Section)")
-        self.setWindowFlags(self.windowFlags() | Qt.Dialog)
+        print("DEBUG: Loading PSO Visualizer V6 (Custom QDialog)")
+        
+        # Window flags: Frameless to use CustomTitleBar
+        self.setWindowFlags(
+            Qt.Dialog | 
+            Qt.FramelessWindowHint |
+            Qt.WindowStaysOnTopHint
+        )
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        
+        # Fixed size popup - prevents resizing issues (larger for aesthetics)
+        self.setFixedSize(1100, 700)
+        
         self.max_iter = max_iterations
         self.is_complete = False
         
@@ -534,12 +547,6 @@ class PSOVisualizerWidget(QWidget):
         # Setup UI
         self.setup_ui()
         
-        # Set size policy to match CAD widget behavior:
-        # - Expanding allows widget to grow with available space
-        # - But minimumSizeHint prevents demanding too much initial space
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.setMinimumSize(300, 200)  # Sensible minimum, matches CAD behavior
-        
         # Render timer (update canvas from data)
         self.render_timer = QTimer()
         self.render_timer.timeout.connect(self._update_canvas)
@@ -548,42 +555,47 @@ class PSOVisualizerWidget(QWidget):
     def setup_ui(self):
         """Setup the UI components."""
         self.setStyleSheet("""
-            QWidget { 
+            QDialog { 
                 background-color: white; 
                 font-family: 'Segoe UI', 'SF Pro Display', sans-serif; 
+                border: 1px solid #ccc;
             }
         """)
         
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(1, 1, 1, 1)  # Thin border margin
         layout.setSpacing(0)
         
-        # ===== HEADER =====
-        header = QFrame()
-        header.setFixedHeight(36)  # Compact header for smaller canvas
-        header.setStyleSheet(f"""
+        # ===== HEADER: Custom Title Bar =====
+        # Matches "Additional Inputs" style
+        self.titleBar = CustomTitleBar(max_res_btn=False, min_res_btn=False, parent=self)
+        self.titleBar.setTitle("PSO Optimization Visualization")
+        
+        # Customize title bar colors to match PSO theme (optional, staying with default Osdag style is safer)
+        # But we need to add the info labels (Iter, Best, Particle) below the title bar or inside it?
+        # The CustomTitleBar occupies the top. We'll put the info panel BELOW it.
+        
+        layout.addWidget(self.titleBar)
+        
+        # ===== INFO PANEL (was part of header) =====
+        info_panel = QFrame()
+        info_panel.setFixedHeight(34)
+        info_panel.setStyleSheet(f"""
             QFrame {{
                 background-color: {HEADER_GREEN};
                 border-bottom: 2px solid #556619;
             }}
         """)
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(8, 0, 8, 0)
+        info_layout = QHBoxLayout(info_panel)
+        info_layout.setContentsMargins(15, 0, 15, 0)
         
-        # Title (compact)
-        title = QLabel("PSO OPTIMIZATION SPACE")
-        title.setStyleSheet("""
-            color: white; 
-            font-size: 12px; 
-            font-weight: bold;
-            letter-spacing: 0.5px;
-        """)
+        # Info labels (Iter, Best, Particle)
         
         # Iteration label
         self.lbl_iter = QLabel("ITERATION: 0")
         self.lbl_iter.setStyleSheet("""
-            color: rgba(255,255,255,0.9); 
-            font-size: 11px; 
+            color: rgba(255,255,255,0.95); 
+            font-size: 12px; 
             font-weight: bold;
         """)
         
@@ -591,44 +603,25 @@ class PSOVisualizerWidget(QWidget):
         self.lbl_best = QLabel("BEST: --- kg")
         self.lbl_best.setStyleSheet("""
             color: #FFD700; 
-            font-size: 11px; 
+            font-size: 12px; 
             font-weight: bold;
         """)
         
         # Best particle info
         self.lbl_particle = QLabel("PARTICLE: ---")
         self.lbl_particle.setStyleSheet("""
-            color: rgba(255,255,255,0.8); 
-            font-size: 10px;
+            color: rgba(255,255,255,0.85); 
+            font-size: 11px;
         """)
         
-        # Close button
-        close_btn = QPushButton("CLOSE")
-        close_btn.clicked.connect(self.switch_to_cad.emit)
-        close_btn.setStyleSheet("""
-            QPushButton { 
-                background-color: #90AF13; 
-                color: white; 
-                border: 0px;
-                border-radius: 5px; 
-                padding: 6px 14px; 
-                font-weight: bold; 
-            }
-            QPushButton:hover { background-color: #a0c020; }
-            QPushButton:pressed { background-color: #7a9a12; }
-        """)
+        info_layout.addWidget(self.lbl_iter)
+        info_layout.addSpacing(20)
+        info_layout.addWidget(self.lbl_best)
+        info_layout.addSpacing(15)
+        info_layout.addWidget(self.lbl_particle)
+        info_layout.addStretch()
         
-        header_layout.addWidget(title)
-        header_layout.addStretch()
-        header_layout.addWidget(self.lbl_iter)
-        header_layout.addSpacing(12)
-        header_layout.addWidget(self.lbl_best)
-        header_layout.addSpacing(8)
-        header_layout.addWidget(self.lbl_particle)
-        header_layout.addSpacing(12)
-        header_layout.addWidget(close_btn)
-        
-        layout.addWidget(header)
+        layout.addWidget(info_panel)
         
         # ===== MAIN CONTENT: Matplotlib Canvas =====
         self.canvas = MatplotlibCanvas(self)
@@ -858,3 +851,9 @@ class PSOVisualizerWidget(QWidget):
             pass
         
         self.is_complete = True
+
+    def closeEvent(self, event):
+        """Handle window close button click."""
+        self.closed.emit()
+        self.switch_to_cad.emit()
+        event.accept()

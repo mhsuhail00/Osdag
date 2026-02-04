@@ -127,43 +127,25 @@ class PSOUIManager:
         
         # Create visualization widget
         try:
-            # Create PSO viz widget
+            # Create PSO viz popup window (fixed size, stays on top)
             self.pso_viz = PSOVisualizerWidget(None, max_iterations=100)
             
-            # Hide CAD widget completely
-            self.parent.cad_widget.hide()
-            
-            # Hide CAD component checkboxes during PSO
-            if hasattr(self.parent, 'cad_comp_widget') and self.parent.cad_comp_widget:
-                self._cad_comp_was_visible = self.parent.cad_comp_widget.isVisible()
-                self.parent.cad_comp_widget.hide()
-            
-            # Remove cad_widget from splitter temporarily
-            self.parent.cad_widget.setParent(None)
-            
-            # Insert PSO viz at index 0
-            self.parent.cad_log_splitter.insertWidget(0, self.pso_viz)
+            # Show as popup window - CAD widget stays visible underneath
             self.pso_viz.show()
             
-            # Store CAD widget for later restoration  
-            self._hidden_cad_widget = self.parent.cad_widget
+            # Center popup on main window
+            if self.parent.window():
+                main_geom = self.parent.window().geometry()
+                popup_geom = self.pso_viz.geometry()
+                x = main_geom.x() + (main_geom.width() - popup_geom.width()) // 2
+                y = main_geom.y() + (main_geom.height() - popup_geom.height()) // 2
+                self.pso_viz.move(x, y)
             
-            # Set splitter sizes: [viz, logs]
-            total_height = self.parent.cad_log_splitter.height()
-            if total_height > 0:
-                viz_h = int(total_height * 6 / 7)
-                log_h = total_height - viz_h
-                self.parent.cad_log_splitter.setSizes([viz_h, log_h])
-            
-            # Ensure log dock is visible
-            if hasattr(self.parent, 'logs_dock') and self.parent.logs_dock:
-                self.parent.logs_dock.show()
-                
             # Store reference for toggle
             self._pso_viz_widget = self.pso_viz
             
-            # Connect toggle
-            self.pso_viz.switch_to_cad.connect(self.restore_cad_from_pso)
+            # Connect close signal to cleanup
+            self.pso_viz.switch_to_cad.connect(self._on_popup_closed)
             
             # Throttle state for UI updates
             self._last_pso_iter = -1
@@ -270,9 +252,8 @@ class PSOUIManager:
         if self.pso_viz:
             self.pso_viz.set_complete()
         
-        # Auto-switch to CAD view after 1.5 second delay
-        # Pass regenerate_model=True to trigger 3D model generation now that CAD widget will be restored
-        QTimer.singleShot(1500, lambda: self.restore_cad_from_pso(regenerate_model=True))
+        # Auto-close popup after 1.5 second delay
+        QTimer.singleShot(1500, self._close_popup_and_render)
         
         # Log message about Alt+G to see graph (after delay)
         def log_alt_g_message():
@@ -288,194 +269,127 @@ class PSOUIManager:
         
         return True
     
-    def restore_cad_from_pso(self, regenerate_model=False):
-        """Swap from PSO visualization to CAD widget.
+    def _on_popup_closed(self):
+        """Handle popup close without regenerating model (user closed manually)."""
+        # Just update the reference - don't trigger model regen
+        if self.pso_viz:
+            self._hidden_pso_widget = self.pso_viz
+            # Don't delete - user might want to toggle back
+        self.pso_viz = None
+    
+    def _close_popup_and_render(self):
+        """Close popup and trigger 3D model generation."""
+        if self.pso_viz:
+            self._hidden_pso_widget = self.pso_viz
+            self.pso_viz.hide()
+            self.pso_viz = None
         
-        Properly removes PSO from splitter before inserting CAD.
+        # Trigger 3D model generation
+        if hasattr(self.parent, '_render_3d_result'):
+            self.parent._render_3d_result(self.parent.backend.design_status, self.parent.backend)
+    
+    def restore_cad_from_pso(self, regenerate_model=False):
+        """Close PSO popup window (CAD is already visible).
         
         Args:
-            regenerate_model: If True, triggers 3D model generation (used effectively after optimization)
+            regenerate_model: If True, triggers 3D model generation
         """
-        # FIRST: Remove PSO viz from splitter (store for later toggle)
+        # Hide the popup window, store for later toggle
         if self.pso_viz:
             self.pso_viz.hide()
-            self.pso_viz.setParent(None)  # Remove from splitter
             self._hidden_pso_widget = self.pso_viz
-        
-        # THEN: Restore CAD widget to splitter at index 0
-        if self._hidden_cad_widget:
-            self.parent.cad_log_splitter.insertWidget(0, self._hidden_cad_widget)
-            self._hidden_cad_widget.show()
-            self.parent.cad_widget = self._hidden_cad_widget
-            self._hidden_cad_widget = None
-        elif hasattr(self.parent, 'cad_widget') and self.parent.cad_widget:
-            # CAD is still in splitter, just show it
-            self.parent.cad_widget.show()
-        
-        # Ensure logs dock is visible
-        if hasattr(self.parent, 'logs_dock') and self.parent.logs_dock:
-            self.parent.logs_dock.show()
-        
-        # Reset splitter sizes for 2 widgets: [cad, logs]
-        total_height = self.parent.cad_log_splitter.height()
-        if total_height > 0:
-            cad_h = int(total_height * 6 / 7)
-            log_h = total_height - cad_h
-            self.parent.cad_log_splitter.setSizes([cad_h, log_h])
-
-        # Show CAD component checkbox toggle (only relevant for CAD view)
-        if hasattr(self.parent, 'cad_comp_widget') and self.parent.cad_comp_widget:
-            self.parent.cad_comp_widget.show()
+            self.pso_viz = None
         
         # Trigger 3D model generation if requested
         if regenerate_model:
-            print("[DEBUG] Triggering delayed 3D model generation (post-PSO restoration)")
-            # Use the new helper method in template_page
+            print("[DEBUG] Triggering 3D model generation")
             if hasattr(self.parent, '_render_3d_result'):
                 self.parent._render_3d_result(self.parent.backend.design_status, self.parent.backend)
 
     
     def show_pso_from_cad(self) -> bool:
-        """Swap from CAD widget to PSO visualization.
-        
-        Properly removes CAD from splitter before inserting PSO.
+        """Show PSO visualization popup window.
         
         Returns:
-            True if swap was successful, False if no PSO widget available
+            True if popup was shown, False if no PSO widget available
         """
         # Only works if we have a hidden PSO widget
         if not self._hidden_pso_widget:
             return False
         
-        # FIRST: Remove CAD from splitter (store for later toggle)
-        if hasattr(self.parent, 'cad_widget') and self.parent.cad_widget:
-            self.parent.cad_widget.hide()
-            self.parent.cad_widget.setParent(None)  # Remove from splitter
-            self._hidden_cad_widget = self.parent.cad_widget
-        
-        # Hide CAD component checkbox toggle (not relevant for PSO graph view)
-        if hasattr(self.parent, 'cad_comp_widget') and self.parent.cad_comp_widget:
-            self.parent.cad_comp_widget.hide()
-        
-        # THEN: Insert PSO at index 0
-        self.parent.cad_log_splitter.insertWidget(0, self._hidden_pso_widget)
-        self._hidden_pso_widget.show()
-        self._pso_viz_widget = self._hidden_pso_widget
-        self.pso_viz = self._hidden_pso_widget  # Update main reference
+        # Show the popup window
+        self.pso_viz = self._hidden_pso_widget
         self._hidden_pso_widget = None
+        self.pso_viz.show()
         
-        # Ensure logs dock is visible
-        if hasattr(self.parent, 'logs_dock') and self.parent.logs_dock:
-            self.parent.logs_dock.show()
-        
-        # Set splitter sizes for 2 widgets: [pso, logs]
-        total_height = self.parent.cad_log_splitter.height()
-        if total_height > 0:
-            viz_h = int(total_height * 6 / 7)
-            log_h = total_height - viz_h
-            self.parent.cad_log_splitter.setSizes([viz_h, log_h])
+        # Center on main window
+        if self.parent.window():
+            main_geom = self.parent.window().geometry()
+            popup_geom = self.pso_viz.geometry()
+            x = main_geom.x() + (main_geom.width() - popup_geom.width()) // 2
+            y = main_geom.y() + (main_geom.height() - popup_geom.height()) // 2
+            self.pso_viz.move(x, y)
         
         return True
     
     def toggle_view(self):
-        """Toggle between PSO visualization and CAD view.
+        """Toggle PSO visualization popup window visibility.
         
-        Bidirectional toggle that preserves both widgets.
         Called by Alt+G keyboard shortcut.
         """
-        # Check if PSO is visible
-        pso_visible = False
+        # Check if PSO popup is currently visible
         if self.pso_viz and self.pso_viz.isVisible():
-            pso_visible = True
-        elif self._pso_viz_widget and self._pso_viz_widget.isVisible():
-            pso_visible = True
-        
-        if pso_visible:
-            # PSO is visible, switch to CAD
-            self.restore_cad_from_pso()
+            # PSO is visible, hide it
+            self.pso_viz.hide()
+            self._hidden_pso_widget = self.pso_viz
+            self.pso_viz = None
         else:
-            # CAD is visible, try to switch to PSO
-            if not self.show_pso_from_cad():
-                # No PSO widget available, ensure CAD is shown
-                if hasattr(self.parent, 'cad_widget') and self.parent.cad_widget:
-                    self.parent.cad_widget.show()
+            # PSO is hidden, try to show it
+            self.show_pso_from_cad()
     
     def cleanup(self):
         """Clean up PSO visualization resources safely.
         
-        Prevents heap corruption by properly stopping timers,
-        removing widgets from parents, and clearing references.
+        Simply closes popup window and clears references.
         """
         # First, clear the callback to prevent any more updates
         if hasattr(self.parent, 'backend') and hasattr(self.parent.backend, '_viz_callback'):
             self.parent.backend._viz_callback = None
         
-        # Cleanup visualization widget
+        # Cleanup visible PSO popup
         if self.pso_viz:
             try:
-                # Stop all timers first
                 self.pso_viz.cleanup()
             except Exception:
                 pass
             
             try:
-                # Hide and remove from parent
                 self.pso_viz.hide()
-                self.pso_viz.setParent(None)
-            except Exception:
-                pass
-            
-            # NOTE: DO NOT call QApplication.processEvents() here!
-            # It causes OpenGL race conditions that corrupt memory.
-            
-            try:
-                # Schedule for deletion
                 self.pso_viz.deleteLater()
             except Exception:
                 pass
             
-            # Clear references
             self.pso_viz = None
+        
+        # Cleanup hidden PSO widget
+        if self._hidden_pso_widget:
+            try:
+                self._hidden_pso_widget.cleanup()
+            except Exception:
+                pass
+            
+            try:
+                self._hidden_pso_widget.hide()
+                self._hidden_pso_widget.deleteLater()
+            except Exception:
+                pass
+            
+            self._hidden_pso_widget = None
         
         # Clear widget references
         self._pso_viz_widget = None
-        self._hidden_pso_widget = None
-        
-        # Clear replay data
         self._pso_data_for_replay = None
-        
-        # IMPORTANT: Restore hidden CAD widget if it was removed from splitter
-        try:
-            if self._hidden_cad_widget:
-                # CAD widget was removed from splitter, restore it
-                self.parent.cad_log_splitter.insertWidget(0, self._hidden_cad_widget)
-                self._hidden_cad_widget.show()
-                self.parent.cad_widget = self._hidden_cad_widget
-                self._hidden_cad_widget = None
-            elif hasattr(self.parent, 'cad_widget') and self.parent.cad_widget:
-                # CAD widget is still in splitter, just show it
-                self.parent.cad_widget.show()
-            
-            # Ensure logs dock is visible
-            if hasattr(self.parent, 'logs_dock') and self.parent.logs_dock:
-                self.parent.logs_dock.show()
-            
-            if hasattr(self.parent, 'cad_log_splitter'):
-                total_height = self.parent.cad_log_splitter.height()
-                if total_height > 0:
-                    cad_h = int(total_height * 6 / 7)
-                    log_h = total_height - cad_h
-                    self.parent.cad_log_splitter.setSizes([cad_h, log_h])
-                    self.parent.cad_log_splitter.setStretchFactor(0, 6)
-                    self.parent.cad_log_splitter.setStretchFactor(1, 1)
-        except Exception:
-            pass
-        
-        # Reset throttle variable for next design run
         self._last_pso_iter = -1
-        
-        # NOTE: DO NOT call QApplication.processEvents() here!
-        # It causes OpenGL race conditions that corrupt memory.
     
     def _restore_initial_layout(self):
         """Restore the initial horizontal splitter layout for Plate Girder module.
