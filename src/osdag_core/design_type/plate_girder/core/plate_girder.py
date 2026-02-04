@@ -666,10 +666,9 @@ class PlateGirderWelded(Member):
             return False
 
     def output_modifier(self, arg):
-        if arg[0] == VALUES_SUPP_TYPE_temp[2]:
-            return False
-        else:
-            return True
+        # Always show output fields regardless of support type selection
+        # Return False = visible, True = hidden (inverted logic in input_dock.py)
+        return False
         
     def output_modifier_long_stiffener(self, arg):
         if arg[0] == 'Thin we':
@@ -678,10 +677,9 @@ class PlateGirderWelded(Member):
             return True
         
     def output_modifier2(self, arg):
-        if arg[0] == 'Thin Web with ITS':
-            return False
-        else:
-            return True
+        # Always show stiffener output fields regardless of web philosophy
+        # Return False = visible, True = hidden (inverted logic in input_dock.py)
+        return False
 
     def output_values(self, flag):
         out_list = []

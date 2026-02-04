@@ -482,6 +482,7 @@ class PSOUIManager:
         
         This ensures proper splitter sizing when pressing Design.
         Keeps all docks visible - PSO graph displays in central area without layout changes.
+        Preserves the horizontal splitter sizes so output dock maintains its width.
         """
         try:
             # Ensure input dock is visible and enabled
@@ -502,8 +503,24 @@ class PSOUIManager:
             if hasattr(self.parent, 'output_dock_label'):
                 self.parent.output_dock_label.setVisible(False)
             
-            # NO splitter resizing - layout stays exactly as it is
-            # Graph just replaces CAD widget in the central area
+            # Preserve horizontal splitter sizes - like CAD viewing area behavior
+            # This ensures output dock maintains its width during PSO visualization
+            if hasattr(self.parent, 'splitter') and self.parent.splitter:
+                splitter = self.parent.splitter
+                current_sizes = splitter.sizes()
+                
+                # Only adjust if splitter has 3 widgets (input, central, output)
+                if len(current_sizes) == 3 and sum(current_sizes) > 0:
+                    # Get preferred dock widths
+                    input_w = self.parent.input_dock.sizeHint().width() if self.parent.input_dock.isVisible() else 0
+                    output_w = self.parent.output_dock.sizeHint().width() if self.parent.output_dock.isVisible() else 0
+                    
+                    total_w = splitter.width()
+                    if total_w > 0:
+                        # Calculate central area width (remaining after docks)
+                        central_w = max(0, total_w - input_w - output_w)
+                        splitter.setSizes([input_w, central_w, output_w])
+                        splitter.refresh()
             
         except Exception as e:
             print(f"[WARNING] Failed to restore initial layout: {e}")

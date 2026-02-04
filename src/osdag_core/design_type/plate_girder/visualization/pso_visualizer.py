@@ -204,11 +204,15 @@ class MatplotlibCanvas(FigureCanvas):
     """Two-Panel Visualization: 3D Cloud Plot + Cross-Section View."""
     
     def __init__(self, parent=None):
-        # Reduced figsize for smaller canvas area (output dock visible)
-        self.fig = Figure(figsize=(12, 6), dpi=85, facecolor='#ffffff')
+        # Use smaller figsize to avoid demanding too much space
+        # The canvas will scale to fill available space
+        self.fig = Figure(figsize=(9, 5), dpi=80, facecolor='#ffffff')
         super().__init__(self.fig)
         self.setParent(parent)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # Use Preferred policy to allow shrinking to fit available space
+        # This matches CAD widget behavior which doesn't demand minimum size
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.setMinimumSize(200, 150)  # Sensible minimum
         self.updateGeometry()
         
         # Initialize Layout
@@ -530,6 +534,12 @@ class PSOVisualizerWidget(QWidget):
         # Setup UI
         self.setup_ui()
         
+        # Set size policy to match CAD widget behavior:
+        # - Expanding allows widget to grow with available space
+        # - But minimumSizeHint prevents demanding too much initial space
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setMinimumSize(300, 200)  # Sensible minimum, matches CAD behavior
+        
         # Render timer (update canvas from data)
         self.render_timer = QTimer()
         self.render_timer.timeout.connect(self._update_canvas)
@@ -622,7 +632,8 @@ class PSOVisualizerWidget(QWidget):
         
         # ===== MAIN CONTENT: Matplotlib Canvas =====
         self.canvas = MatplotlibCanvas(self)
-        self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # Canvas uses Preferred policy set in MatplotlibCanvas.__init__
+        # This prevents the matplotlib figure from demanding excessive space
         layout.addWidget(self.canvas, 1)
         
         # ===== BOTTOM TOOLBAR (Compact) =====
