@@ -1430,8 +1430,9 @@ class PlateGirderWelded(Member):
                     else:
                         self.shearchecks = False
                     
-                    if self.support_type != 'Major Laterally Unsupported':
-                        is_safe, self.Md, self.moment_ratio, self.V_d = moment_capacity_laterally_supported(self.load.shear_force,self.plast_sec_mod_z,self.elast_sec_mod_z,self.material.fy,self.gamma_m0,self.total_depth,self.web_thickness,self.top_flange_thickness,self.bottom_flange_thickness,self.section_class, self.support_condition, self.load.moment, debug=self.debug)
+                    if 'Unsupported' in self.support_type:
+                        # Laterally unsupported (Major or Minor)
+                        is_safe, self.Md, self.moment_ratio, self.V_d, self.M_cr, self.lambda_lt, self.phi_lt, self.X_lt, self.fbd_lt, self.It, self.Iw = moment_capacity_laterally_unsupported(self.material.modulus_of_elasticity,self.effective_length,self.total_depth,self.top_flange_thickness,self.bottom_flange_thickness,self.top_flange_width,self.bottom_flange_width,self.web_thickness,self.loading_case,self.gamma_m0,self.material.fy,self.load.shear_force, self.warping, self.load.moment, self.plast_sec_mod_z, self.elast_sec_mod_z, self.section_class, self.alpha_lt, debug=self.debug)
                         if self.debug:
                             print(f"Moment Capacity (Md / design_moment): {self.Md:.2f} N-mm")
                         if is_safe:
@@ -1440,8 +1441,9 @@ class PlateGirderWelded(Member):
                         else:
                             self.momentchecks = False
                             self.logger.error("Moment Check failed")
-                    else: 
-                        is_safe, self.Md, self.moment_ratio, self.V_d, self.M_cr, self.lambda_lt, self.phi_lt, self.X_lt, self.fbd_lt, self.It, self.Iw = moment_capacity_laterally_unsupported(self.material.modulus_of_elasticity,self.effective_length,self.total_depth,self.top_flange_thickness,self.bottom_flange_thickness,self.top_flange_width,self.bottom_flange_width,self.web_thickness,self.loading_case,self.gamma_m0,self.material.fy,self.load.shear_force, self.warping, self.load.moment, self.plast_sec_mod_z, self.elast_sec_mod_z, self.section_class, self.alpha_lt, debug=self.debug)
+                    else:
+                        # Laterally supported
+                        is_safe, self.Md, self.moment_ratio, self.V_d = moment_capacity_laterally_supported(self.load.shear_force,self.plast_sec_mod_z,self.elast_sec_mod_z,self.material.fy,self.gamma_m0,self.total_depth,self.web_thickness,self.top_flange_thickness,self.bottom_flange_thickness,self.section_class, self.support_condition, self.load.moment, debug=self.debug)
                         if self.debug:
                             print(f"Moment Capacity (Md / design_moment): {self.Md:.2f} N-mm")
                         if is_safe:
@@ -1632,8 +1634,9 @@ class PlateGirderWelded(Member):
                     else:
                         self.shearchecks = False
 
-                    if self.support_type != 'Major Laterally Unsupported':
-                        is_safe, self.Md, self.moment_ratio, self.V_d = moment_capacity_laterally_supported(self.load.shear_force,self.plast_sec_mod_z,self.elast_sec_mod_z,self.material.fy,self.gamma_m0,self.total_depth,self.web_thickness,self.top_flange_thickness,self.bottom_flange_thickness,self.section_class, self.support_condition, self.load.moment, debug=self.debug)
+                    if 'Unsupported' in self.support_type:
+                        # Laterally unsupported (Major or Minor)
+                        is_safe, self.Md, self.moment_ratio, self.V_d, self.M_cr, self.lambda_lt, self.phi_lt, self.X_lt, self.fbd_lt, self.It, self.Iw = moment_capacity_laterally_unsupported(self.material.modulus_of_elasticity,self.effective_length,self.total_depth,self.top_flange_thickness,self.bottom_flange_thickness,self.top_flange_width,self.bottom_flange_width,self.web_thickness,self.loading_case,self.gamma_m0,self.material.fy,self.load.shear_force, self.warping, self.load.moment, self.plast_sec_mod_z, self.elast_sec_mod_z, self.section_class, self.alpha_lt, debug=self.debug)
                         if self.debug:
                             print(f"Moment Capacity (Md / design_moment): {self.Md:.2f} N-mm")
                         if is_safe:
@@ -1643,7 +1646,10 @@ class PlateGirderWelded(Member):
                             self.momentchecks = False
                             self.logger.error("Moment Check failed")
                     else:
-                        is_safe, self.Md, self.moment_ratio, self.V_d, self.M_cr, self.lambda_lt, self.phi_lt, self.X_lt, self.fbd_lt, self.It, self.Iw = moment_capacity_laterally_unsupported(self.material.modulus_of_elasticity,self.effective_length,self.total_depth,self.top_flange_thickness,self.bottom_flange_thickness,self.top_flange_width,self.bottom_flange_width,self.web_thickness,self.loading_case,self.gamma_m0,self.material.fy,self.load.shear_force, self.warping, self.load.moment, self.plast_sec_mod_z, self.elast_sec_mod_z, self.section_class, self.alpha_lt, debug=self.debug)
+                        # Laterally supported
+                        is_safe, self.Md, self.moment_ratio, self.V_d = moment_capacity_laterally_supported(self.load.shear_force,self.plast_sec_mod_z,self.elast_sec_mod_z,self.material.fy,self.gamma_m0,self.total_depth,self.web_thickness,self.top_flange_thickness,self.bottom_flange_thickness,self.section_class, self.support_condition, self.load.moment, debug=self.debug)
+                        if self.debug:
+                            print(f"Moment Capacity (Md / design_moment): {self.Md:.2f} N-mm")
                         if is_safe:
                             self.momentchecks = True
                             self.logger.info("Moment Check passed")
@@ -1947,14 +1953,25 @@ class PlateGirderWelded(Member):
             # Calculate section properties needed for moment capacity checks
             # CRITICAL: Must recalculate for each particle in PSO optimization
             from ....utils.common.Unsymmetrical_Section_Properties import Unsymmetrical_I_Section_Properties
-            self.plast_sec_mod_z = Unsymmetrical_I_Section_Properties.calc_PlasticModulusZ(
-                self.total_depth, self.top_flange_width, self.bottom_flange_width,
-                self.web_thickness, self.top_flange_thickness, self.bottom_flange_thickness,
-                self.epsilon, debug=self.debug)
-            self.elast_sec_mod_z = Unsymmetrical_I_Section_Properties.calc_ElasticModulusZz(
-                self.total_depth, self.top_flange_width, self.bottom_flange_width,
-                self.web_thickness, self.top_flange_thickness, self.bottom_flange_thickness, debug=self.debug
-            )
+            
+            # Check for Minor Axis Design - must match design_check logic
+            if 'Minor' in self.support_type:
+                self.plast_sec_mod_z = Unsymmetrical_I_Section_Properties.calc_PlasticModulusY(
+                    self.total_depth, self.top_flange_width, self.bottom_flange_width,
+                    self.web_thickness, self.top_flange_thickness, self.bottom_flange_thickness, debug=self.debug)
+                self.elast_sec_mod_z = Unsymmetrical_I_Section_Properties.calc_ElasticModulusZy(
+                    self.total_depth, self.top_flange_width, self.bottom_flange_width,
+                    self.web_thickness, self.top_flange_thickness, self.bottom_flange_thickness, debug=self.debug
+                )
+            else:
+                self.plast_sec_mod_z = Unsymmetrical_I_Section_Properties.calc_PlasticModulusZ(
+                    self.total_depth, self.top_flange_width, self.bottom_flange_width,
+                    self.web_thickness, self.top_flange_thickness, self.bottom_flange_thickness,
+                    self.epsilon, debug=self.debug)
+                self.elast_sec_mod_z = Unsymmetrical_I_Section_Properties.calc_ElasticModulusZz(
+                    self.total_depth, self.top_flange_width, self.bottom_flange_width,
+                    self.web_thickness, self.top_flange_thickness, self.bottom_flange_thickness, debug=self.debug
+                )
 
             if self.web_philosophy == 'Thick Web without ITS':
                 print('THICK WEB')
@@ -2001,23 +2018,22 @@ class PlateGirderWelded(Member):
                         self.shearchecks = False
                     
                     #support type supp or unsupp
-                    if self.support_type != 'Major Laterally Unsupported':
-
-                        #moment check supp
-                        is_safe, self.Md, self.moment_ratio, self.V_d = moment_capacity_laterally_supported(self.load.shear_force,self.plast_sec_mod_z,self.elast_sec_mod_z,self.material.fy,self.gamma_m0,self.total_depth,self.web_thickness,self.top_flange_thickness,self.bottom_flange_thickness,self.section_class, self.support_condition, self.load.moment)
+                    if 'Unsupported' in self.support_type:
+                        # Laterally unsupported (Major or Minor)
+                        is_safe, self.Md, self.moment_ratio, self.V_d, self.M_cr, self.lambda_lt, self.phi_lt, self.X_lt, self.fbd_lt, self.It, self.Iw = moment_capacity_laterally_unsupported(self.material.modulus_of_elasticity,self.effective_length,self.total_depth,self.top_flange_thickness,self.bottom_flange_thickness,self.top_flange_width,self.bottom_flange_width,self.web_thickness,self.loading_case,self.gamma_m0,self.material.fy,self.load.shear_force, self.warping, self.load.moment, self.plast_sec_mod_z, self.elast_sec_mod_z, self.section_class, self.alpha_lt)
                         if self.debug:
-                            print(f"[DEBUG] Moment Check (PSO): Md={self.Md:.2e}, Ratio={self.moment_ratio:.4f}")
+                            print(f"[DEBUG] Moment Check (PSO Unsupported): Md={self.Md:.2e}, Ratio={self.moment_ratio:.4f}")
                         if is_safe:
                             self.momentchecks = True
                             # self.logger.info("Moment Check passed")
                         else:
                             self.momentchecks = False
                             # self.logger.error("Moment Check failed")
-                    
-                    else:  #unsupp
-
-                        #moment check unspp
-                        is_safe, self.Md, self.moment_ratio, self.V_d, self.M_cr, self.lambda_lt, self.phi_lt, self.X_lt, self.fbd_lt, self.It, self.Iw = moment_capacity_laterally_unsupported(self.material.modulus_of_elasticity,self.effective_length,self.total_depth,self.top_flange_thickness,self.bottom_flange_thickness,self.top_flange_width,self.bottom_flange_width,self.web_thickness,self.loading_case,self.gamma_m0,self.material.fy,self.load.shear_force, self.warping, self.load.moment, self.plast_sec_mod_z, self.elast_sec_mod_z, self.section_class, self.alpha_lt)
+                    else:
+                        # Laterally supported
+                        is_safe, self.Md, self.moment_ratio, self.V_d = moment_capacity_laterally_supported(self.load.shear_force,self.plast_sec_mod_z,self.elast_sec_mod_z,self.material.fy,self.gamma_m0,self.total_depth,self.web_thickness,self.top_flange_thickness,self.bottom_flange_thickness,self.section_class, self.support_condition, self.load.moment)
+                        if self.debug:
+                            print(f"[DEBUG] Moment Check (PSO Supported): Md={self.Md:.2e}, Ratio={self.moment_ratio:.4f}")
                         if is_safe:
                             self.momentchecks = True
                             # self.logger.info("Moment Check passed")
@@ -2128,29 +2144,23 @@ class PlateGirderWelded(Member):
                         self.shearchecks = False
 
                     # support type supp or unsupp
-                    if self.support_type != 'Major Laterally Unsupported':
-                        #moment check supp
-                        is_safe, self.Md, self.moment_ratio, self.V_d = moment_capacity_laterally_supported(self.load.shear_force,self.plast_sec_mod_z,self.elast_sec_mod_z,self.material.fy,self.gamma_m0,self.total_depth,self.web_thickness,self.top_flange_thickness,self.bottom_flange_thickness,self.section_class, self.support_condition, self.load.moment)
-                        if is_safe:
-                            self.momentchecks = True
-
-                            # self.logger.info("Moment Check passed")
-                        else:
-                            self.momentchecks = False
-
-                            # self.logger.error("Moment Check failed")
-                    
-                    else:  #unsupp
-
-                        #moment check unspp
+                    if 'Unsupported' in self.support_type:
+                        # Laterally unsupported (Major or Minor)
                         is_safe, self.Md, self.moment_ratio, self.V_d, self.M_cr, self.lambda_lt, self.phi_lt, self.X_lt, self.fbd_lt, self.It, self.Iw = moment_capacity_laterally_unsupported(self.material.modulus_of_elasticity,self.effective_length,self.total_depth,self.top_flange_thickness,self.bottom_flange_thickness,self.top_flange_width,self.bottom_flange_width,self.web_thickness,self.loading_case,self.gamma_m0,self.material.fy,self.load.shear_force, self.warping, self.load.moment, self.plast_sec_mod_z, self.elast_sec_mod_z, self.section_class, self.alpha_lt)
                         if is_safe:
                             self.momentchecks = True
-
                             # self.logger.info("Moment Check passed")
                         else:
                             self.momentchecks = False
-
+                            # self.logger.error("Moment Check failed")
+                    else:
+                        # Laterally supported
+                        is_safe, self.Md, self.moment_ratio, self.V_d = moment_capacity_laterally_supported(self.load.shear_force,self.plast_sec_mod_z,self.elast_sec_mod_z,self.material.fy,self.gamma_m0,self.total_depth,self.web_thickness,self.top_flange_thickness,self.bottom_flange_thickness,self.section_class, self.support_condition, self.load.moment)
+                        if is_safe:
+                            self.momentchecks = True
+                            # self.logger.info("Moment Check passed")
+                        else:
+                            self.momentchecks = False
                             # self.logger.error("Moment Check failed")
 
                 else:
@@ -2360,14 +2370,25 @@ class PlateGirderWelded(Member):
         
         # Print Plastic Modulus for PSO optimization
         from ....utils.common.Unsymmetrical_Section_Properties import Unsymmetrical_I_Section_Properties
-        pso_plastic_modulus = Unsymmetrical_I_Section_Properties.calc_PlasticModulusZ(
-            self.total_depth, self.top_flange_width, self.bottom_flange_width,
-            self.web_thickness, self.top_flange_thickness, self.bottom_flange_thickness,
-            self.epsilon, debug=self.debug)
-        pso_elastic_modulus = Unsymmetrical_I_Section_Properties.calc_ElasticModulusZz(
-            self.total_depth, self.top_flange_width, self.bottom_flange_width,
-            self.web_thickness, self.top_flange_thickness, self.bottom_flange_thickness, debug=self.debug
-        )
+        
+        # Use correct axis for section modulus display
+        if 'Minor' in self.support_type:
+            pso_plastic_modulus = Unsymmetrical_I_Section_Properties.calc_PlasticModulusY(
+                self.total_depth, self.top_flange_width, self.bottom_flange_width,
+                self.web_thickness, self.top_flange_thickness, self.bottom_flange_thickness, debug=self.debug)
+            pso_elastic_modulus = Unsymmetrical_I_Section_Properties.calc_ElasticModulusZy(
+                self.total_depth, self.top_flange_width, self.bottom_flange_width,
+                self.web_thickness, self.top_flange_thickness, self.bottom_flange_thickness, debug=self.debug
+            )
+        else:
+            pso_plastic_modulus = Unsymmetrical_I_Section_Properties.calc_PlasticModulusZ(
+                self.total_depth, self.top_flange_width, self.bottom_flange_width,
+                self.web_thickness, self.top_flange_thickness, self.bottom_flange_thickness,
+                self.epsilon, debug=self.debug)
+            pso_elastic_modulus = Unsymmetrical_I_Section_Properties.calc_ElasticModulusZz(
+                self.total_depth, self.top_flange_width, self.bottom_flange_width,
+                self.web_thickness, self.top_flange_thickness, self.bottom_flange_thickness, debug=self.debug
+            )
         if self.debug:
             print(f"\n========== PSO OPTIMIZED SECTION PROPERTIES ==========")
             print(f"  Total Depth (D): {self.total_depth:.2f} mm")
