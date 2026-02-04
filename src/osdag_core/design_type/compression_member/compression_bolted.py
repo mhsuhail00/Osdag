@@ -1436,6 +1436,12 @@ class Compression_bolted(Member):
 
             self.design_status = True # Provisional
             self.select_bolt_dia(design_dictionary)
+            
+            # Retry logic: If design failed during bolt selection or final member check,
+            # try the next available section (recursion)
+            if self.design_status is False:
+                self.logger.info(f" : Section {self.section_size_1.designation} failed checks. Retrying with next available section...")
+                self.initial_member_capacity(design_dictionary, previous_size=self.section_size_1.designation)
         else:
             self.design_status = False
             self.logger.warning(" : The available depth of the member cannot accommodate the minimum available bolt diameter of {} mm considering the "
