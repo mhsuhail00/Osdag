@@ -398,8 +398,8 @@ class LapJointWelded(MomentConnection):
 
         weld_size_input = design_dictionary[KEY_WELD_SIZE]
         
-        # Check if user selected "All" - iterate through valid sizes
-        if isinstance(weld_size_input, str) and weld_size_input.lower() == 'all':
+        # Check if user selected "All" or provided a list of sizes - iterate through valid sizes
+        if (isinstance(weld_size_input, str) and weld_size_input.lower() == 'all') or isinstance(weld_size_input, list):
             # Get valid weld sizes based on plate thickness
             plate1_thk = float(design_dictionary[KEY_PLATE1_THICKNESS])
             plate2_thk = float(design_dictionary[KEY_PLATE2_THICKNESS])
@@ -407,10 +407,25 @@ class LapJointWelded(MomentConnection):
             s_min = IS800_2007.cl_10_5_2_3_min_weld_size(plate1_thk, plate2_thk)
             s_max = Tmin - 1.5 if Tmin >= 10 else Tmin
             
-            valid_sizes = [s for s in ALL_WELD_SIZES if s_min <= s <= s_max]
+            # Determine potential sizes to check
+            if isinstance(weld_size_input, list):
+                # Use provided list, convert to float for comparison
+                potential_sizes = []
+                for s in weld_size_input:
+                    try:
+                        val = float(s)
+                        potential_sizes.append(val)
+                    except ValueError:
+                        continue
+                potential_sizes.sort()
+            else:
+                # "All" case - use standard sizes
+                potential_sizes = ALL_WELD_SIZES
+
+            valid_sizes = [s for s in potential_sizes if s_min <= s <= s_max]
             
             if not valid_sizes:
-                self.logger.error(": No valid weld sizes available for given plate thicknesses.")
+                self.logger.error(f": No valid weld sizes available for given plate thicknesses (s_min={s_min}, s_max={s_max}).")
                 self.design_status = False
                 return
             
@@ -425,7 +440,7 @@ class LapJointWelded(MomentConnection):
                 temp_dict[KEY_WELD_SIZE] = str(candidate_size)
                 
                 if not self.weld_size_check(temp_dict):
-                    continue  # This size didn't pass basic geometric check
+                    continue  # This size didn't pass basic geometric check (though we filtered by min/max, weld_size_check might have other logic or logging)
                 
                 self.calculate_weld_strength(temp_dict)
                 
