@@ -35,7 +35,6 @@ from osdag_core.design_type.compression_member.compression_column import ColumnD
 # Spacing Detail
 from osdag_gui.ui.components.output_details.b2bCoverPlateWelded import B2BCoverPlateWeldedDetails
 from osdag_gui.ui.components.output_details.b2bCoverPlate import B2BCoverPlateDetails
-from osdag_gui.ui.components.output_details.b2bCoverPlateCapacity import B2BCoverPlateCapacityDetails
 from osdag_gui.ui.components.output_details.b2cEndPlate import B2CEndPlateDetails
 from osdag_gui.ui.components.output_details.b2bEndPlateSketch import B2BEndPlateSketch
 from osdag_gui.ui.components.output_details.basePlate import BasePlateDetails
@@ -47,6 +46,12 @@ from osdag_gui.ui.components.output_details.boltPattern import BoltPatternGenera
 from osdag_gui.ui.components.output_details.seatedAngleSpacing import SeatedAngleDetails
 from osdag_gui.ui.components.output_details.cleatAngle import CleatAngleDetails
 from osdag_gui.ui.components.output_details.tensionBoltedSpacing import TensionBoltedDetails
+
+from osdag_gui.ui.components.output_details.plate_fracture_digram.beam_web_plate import BeamWebFractureDialog
+from osdag_gui.ui.components.output_details.plate_fracture_digram.beam_flange_plate import BeamFlangeFractureDialog
+from osdag_gui.ui.components.output_details.plate_fracture_digram.column_web_plate import ColWebFractureDialog
+from osdag_gui.ui.components.output_details.plate_fracture_digram.column_flange_plate import ColFlangeFractureDialog
+
 
 from osdag_gui.__config__ import CAD_BACKEND
 from osdag_gui.OS_safety_protocols import get_cleanup_coordinator
@@ -675,13 +680,14 @@ class OutputDock(QWidget):
 
     def spacing_dialog(self, main, button_list, button):
         for op in button_list:
+            # print(f"op: {op}")
             tup = op[3]
             title = tup[0]
             fn = tup[1]
             if op[0] == button.objectName():
                 if op[0]==KEY_OUT_SPACING or op[0]==KEY_OUT_SPTING_SPACING:
                     # print(main)
-                    flag_legacyspacing = False 
+                    flag_legacyspacing = False
                     if main.module_name()==KEY_DISP_FINPLATE:
                         if hasattr(self.backend, 'spting_leg') and \
                             hasattr(self.backend.spting_leg, 'bolt_line') and \
@@ -760,14 +766,6 @@ class OutputDock(QWidget):
                 elif op[0]==KEY_FLANGE_WELD_DETAILS and main.module_name()==KEY_DISP_BEAMCOVERPLATEWELD:
                     self.run_spacing_script(0,0,B2BCoverPlateWeldedDetails,(main,False))
                     return   
-
-                elif op[0]==KEY_WEB_CAPACITY and main.module_name()==KEY_DISP_BEAMCOVERPLATE:  
-                    self.run_capacity_details(0,0,B2BCoverPlateCapacityDetails,(main,True,"capacity"))
-                    return
-                
-                elif op[0]==KEY_FLANGE_CAPACITY and main.module_name()==KEY_DISP_BEAMCOVERPLATE:
-                    self.run_capacity_details(0,0,B2BCoverPlateCapacityDetails,(main,False,"capacity"))
-                    return
                 
                 elif op[0]==KEY_OUT_STIFFENER_SKETCH and op[1]==KEY_OUT_DISP_STIFFENER_SKETCH:
                     self.run_spacing_script(0,0,B2BEndPlateSketch,main)
@@ -779,6 +777,27 @@ class OutputDock(QWidget):
                     else:
                         self.run_spacing_script(0,0,C2CEndPlateDetails,(main,1))
                     break
+
+        #--------------------------Failure-Pattern-Dialog----------------------------------------------------------------
+                elif op[0]==KEY_WEB_CAPACITY and main.module_name()==KEY_DISP_COLUMNCOVERPLATE:
+                    dialog = ColWebFractureDialog(main, fn)
+                    dialog.exec()
+                    return
+                
+                elif op[0]==KEY_FLANGE_CAPACITY and main.module_name()==KEY_DISP_COLUMNCOVERPLATE:
+                    dialog = ColFlangeFractureDialog(main, fn)
+                    dialog.exec()
+                    return
+
+                elif op[0]==KEY_WEB_CAPACITY and main.module_name()==KEY_DISP_BEAMCOVERPLATE:  
+                    dialog = BeamWebFractureDialog(main, fn)
+                    dialog.exec()
+                    return
+                
+                elif op[0]==KEY_FLANGE_CAPACITY and main.module_name()==KEY_DISP_BEAMCOVERPLATE:
+                    dialog = BeamFlangeFractureDialog(main, fn)
+                    dialog.exec()
+                    return
         #--------------------------Legacy-dialog----------------------------------------------------------------
                 dialog = SpacingDialog(main, title, fn)
                 dialog.exec()

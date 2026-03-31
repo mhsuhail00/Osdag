@@ -455,7 +455,6 @@ class BeamCoverPlate(MomentConnection):
                self.web_plate.edge_dist_provided if flag else '')
         webspacing.append(t11)
         return webspacing
-    #
 
     def flangecapacity(self, flag):
 
