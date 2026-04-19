@@ -441,6 +441,7 @@ class CustomViewer3d(qtViewer3d):
         # Deferred re-resize: show() triggers _update_dpi internally, so we run
         # _resize_navcube again after the event loop settles to ensure our size wins.
         QTimer.singleShot(50, self._resize_navcube)
+        self.navcube.mark_ready()
         self.navcube.update()
 
     # ------------------------------------------------------------------
