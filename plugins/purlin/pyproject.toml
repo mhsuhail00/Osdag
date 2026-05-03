@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "purlin_designer"
+version = "1.0"
+description = "A Purlin Designer plugin for Osdag."
+authors = [{name = "FOSSEE Team"}]
+license = {text = "LGPA"}
+requires-python = ">=3.10"
+dependencies = [
+    "PySide6>=6.9.2"
+]
+
+# Entry point group `osdag.plugins` tells Osdag where to find this plugin.
+[project.entry-points."osdag.plugins"]
+purlin_designer = "purlin"

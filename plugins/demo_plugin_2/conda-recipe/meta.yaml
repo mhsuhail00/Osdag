@@ -1,0 +1,35 @@
+{% set name = "demo_plugin_2" %}
+{% set version = "1.0.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ..
+
+build:
+  noarch: python
+  script: "{{ PYTHON }} -m pip install . --no-deps -vv"
+
+requirements:
+  host:
+    - python >=3.10
+    - pip
+    - setuptools >=61.0
+  run:
+    - osdag::osdag >=2025.01.a.2
+
+about:
+  license: LGPL
+  summary: "A demonstration plugin for Osdag."
+  description: |
+    A demo plugin that integrates with the Osdag platform through the `osdag.plugins` entry point.
+  authors:
+    - FOSSEE Team
+    - ABC
+    - XYZ
+
+extra:
+  recipe-maintainers:
+    - fossee-contributors

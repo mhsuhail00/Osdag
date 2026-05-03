@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "demo_plugin_2"
+version = "1.0.0"
+description = "A demonstration plugin for Osdag."
+authors = [
+    {name = "FOSSEE Team"}, 
+]
+
+license = {text = "LGPL"}
+requires-python = ">=3.10"
+dependencies = [
+
+]
+
+[tool.setuptools]
+packages = ["demo_plugin_2"]
+
+# Entry point group `osdag.plugins` tells Osdag where to find this plugin.
+[project.entry-points."osdag.plugins"]
+demo_plugin_2 = "demo_plugin_2"
+
+
+# Listed name demo_plugin_1 on PyPip/conda import name demo_plugin_1
+#├── pyproject.toml
+#└── demo_plugin_1/
+#    ├── __init__.py
+#    ├── demo_plugin.py
+#    ├── data/
+#    └── utils/
+
+# if 
+#├── pyproject.toml
+#└── demo_plugin_2/
+#    ├── __init__.py
+#    ├── demo_plugin.py
+#    ├── data/
+#    └── utils/
+# then import using demo_plugin_2 and listed as demo_plugin_1 change name
+# field to demo_plugin_2 and then listed as demo_plugin_2 on PyPip/conda.

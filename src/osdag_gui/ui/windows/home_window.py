@@ -172,6 +172,8 @@ class HomeWindow(QWidget):
     triggerLoadOsi = Signal()
     downloadDatabase = Signal(str, str)
     importSection = Signal(str)
+    triggerPluginManager = Signal()
+
     def __init__(self):
         super().__init__()
         # Ensures automatic deletion when closed
@@ -248,14 +250,16 @@ class HomeWindow(QWidget):
                 # button.clicked.connect(lambda checked=False: print(f"@Total: {len(QApplication.allWidgets())}"))
 
             elif label.strip() == "Plugins":
-                button.setToolTip("Under Development")
-                button.clicked.connect(
-                    lambda checked=False, btn=button: QToolTip.showText(
-                        btn.mapToGlobal(btn.rect().center()),
-                        btn.toolTip(),
-                        btn
-                    )
-                )
+                # button.setToolTip("Under Development")
+                # button.clicked.connect(
+                #     lambda checked=False, btn=button: QToolTip.showText(
+                #         btn.mapToGlobal(btn.rect().center()),
+                #         btn.toolTip(),
+                #         btn
+                #     )
+                # )
+                self.triggerPluginManager.connect(self.open_plugin_manager)
+                button.clicked.connect(lambda checked=False: self.triggerPluginManager.emit())
 
             self.buttons.append(button)
             self.button_group.addButton(button, i) # Add button to the group with an ID
@@ -610,6 +614,10 @@ class HomeWindow(QWidget):
 
     def handle_card_open_clicked(self, card_title):
         self.cardOpenClicked.emit(card_title)
+
+    def open_plugin_manager(self):
+        self.plugin_manager_dialog = self.app.plugin_manager_dialog
+        self.plugin_manager_dialog.show()
 
     def set_active_button(self, module):
         self.nav_bar.set_active_button_by_name(module)
