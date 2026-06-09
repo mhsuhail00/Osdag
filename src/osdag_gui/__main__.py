@@ -216,23 +216,26 @@ def gui():
         file.close()
         app.setStyleSheet(stylesheet)
 
-    # ====== Plugin Manager ======
-    print("\n[INFO] Initializing Plugin Management System...")
-    from osdag_core.utils.plugin_manager import PluginManager
-    from osdag_gui.ui.components.dialogs.plugin_manager_dialog import PluginManagerDialog
-    if not hasattr(app, "plugin_manager"):
-        app.plugin_manager = PluginManager()
-    if not hasattr(app, "plugin_manager_dialog"):
-        app.plugin_manager_dialog = PluginManagerDialog()
-    print("[INFO] Plugin Management System initialized.\n")
     
-    # ============================
     
     def show_main_window():
         from osdag_gui.main_window import MainWindow
         app.internet_connectivity = InternetConnectivity() # --- Internet Connectivity object ---
         # Parallely load the MainWindow
         app.main_window = MainWindow()
+        
+        # ====== Plugin Manager ======
+        print("\n[INFO] Initializing Plugin Management System...")
+        from osdag_core.utils.plugin_manager import PluginManager
+        from osdag_gui.ui.components.dialogs.plugin_manager_dialog import PluginManagerDialog
+        if not hasattr(app, "plugin_manager"):
+            app.plugin_manager = PluginManager()
+        if not hasattr(app, "plugin_manager_dialog"):
+            app.plugin_manager_dialog = PluginManagerDialog()
+        print("[INFO] Plugin Management System initialized.\n")
+        
+        # ============================
+        
         # To ensure no Jittering on startup
         def show_final():
             app.main_window.show()

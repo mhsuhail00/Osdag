@@ -1,22 +1,29 @@
+from pathlib import Path
+
 from PySide6.QtWidgets import (
-    QApplication, 
-    QDialog, 
-    QVBoxLayout, 
-    QPushButton, 
-    QHBoxLayout, 
-    QWidget, 
-    QSizePolicy, 
+    QApplication,
+    QDialog,
+    QVBoxLayout,
+    QPushButton,
+    QHBoxLayout,
+    QWidget,
+    QSizePolicy,
     QLabel,
     QTextEdit,
-    QScrollArea
+    QScrollArea,
+    QListWidget,
+    QFileDialog,
+    QMessageBox
 )
-from PySide6.QtCore import Qt , Signal, Slot
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtGui import QIcon
 from osdag_gui.ui.components.dialogs.custom_titlebar import CustomTitleBar
 from osdag_gui.data.ui_data import Data
 from osdag_core.utils.plugin_manager import PluginManager, PluginMetaData
 from osdag_gui.ui.components.dialogs.plugin_store_dialog import PluginStoreDialog
+from osdag_gui.ui.components.dialogs.custom_messagebox import CustomMessageBox, MessageBoxType
+
 
 class StatusIndicator(QWidget):
     def __init__(self, plugin: PluginMetaData = None, parent=None):
@@ -31,7 +38,8 @@ class StatusIndicator(QWidget):
         self.circle.setStyleSheet("border-radius: 6px; background-color: red;")
 
         self.text: QLabel = QLabel("Inactive")
-        self.text.setStyleSheet(f"font-size: 9pt; font-weight: bold; color: red;")
+        self.text.setStyleSheet(
+            f"font-size: 9pt; font-weight: bold; color: red;")
 
         layout.addWidget(self.circle)
         layout.addWidget(self.text)
@@ -40,13 +48,16 @@ class StatusIndicator(QWidget):
 
     def update_status(self, status: bool) -> None:
         if status:
-            self.circle.setStyleSheet("border-radius: 6px; background-color: green;")
+            self.circle.setStyleSheet(
+                "border-radius: 6px; background-color: green;")
             self.text.setText("Active")
             self.text.setStyleSheet("color: green;")
         else:
-            self.circle.setStyleSheet("border-radius: 6px; background-color: red;")
+            self.circle.setStyleSheet(
+                "border-radius: 6px; background-color: red;")
             self.text.setText("Inactive")
             self.text.setStyleSheet("color: red;")
+
 
 class PluginWidget(QWidget):
     activate = Signal(PluginMetaData)
@@ -59,7 +70,7 @@ class PluginWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(12)
-    
+
         self.setStyleSheet("""
             PluginWidget {
                 border: 1px solid #d0d0d0;
@@ -74,8 +85,10 @@ class PluginWidget(QWidget):
         header_layout.setContentsMargins(2, 2, 2, 2)
         header_layout.setSpacing(5)
 
-        self.name_label = QLabel(f"{'<b>'+plugin.name+'</b> (Dev Plugin)' if plugin.is_dev else '<b>'+plugin.name+'</b>'}")
-        self.name_label.setStyleSheet("font-weight: bold; font-size: 12pt; color: #90AF13;")
+        self.name_label = QLabel(
+            f"{'<b>'+plugin.name+'</b> (Dev Plugin)' if plugin.is_dev else '<b>'+plugin.name+'</b>'}")
+        self.name_label.setStyleSheet(
+            "font-weight: bold; font-size: 12pt; color: #90AF13;")
         self.status_indicator = StatusIndicator(plugin)
 
         header_layout.addWidget(self.name_label, alignment=Qt.AlignLeft)
@@ -98,7 +111,8 @@ class PluginWidget(QWidget):
         self.content.setText(content_text)
         self.content.setMinimumHeight(100)
         self.content.setMaximumHeight(200)
-        self.content.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.content.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.content.setStyleSheet("""
             QTextEdit {
                 border: 1px solid #e0e0e0;
@@ -109,8 +123,6 @@ class PluginWidget(QWidget):
             }
         """)
         content_layout.addWidget(self.content, stretch=3)
- 
-
 
        # RIGHT SIDE (buttons)
         btn_layout = QVBoxLayout()
@@ -138,7 +150,7 @@ class PluginWidget(QWidget):
                 QPushButton:hover { background-color: #7A9611; }
                 QPushButton:pressed { background-color: #6B850F; }
             """)
-            btn_layout.addWidget(btn, 0, Qt.AlignRight) 
+            btn_layout.addWidget(btn, 0, Qt.AlignRight)
 
         content_layout.addLayout(btn_layout, stretch=1)
 
@@ -149,9 +161,9 @@ class PluginWidget(QWidget):
         self.btnDeactivate.clicked.connect(self._emit_deactivate)
         self.btnDelete.clicked.connect(self._emit_delete)
 
-        content_min_width = self.content.sizeHint().width() + 150 
+        content_min_width = self.content.sizeHint().width() + 150
         self.setMinimumWidth(content_min_width)
-            
+
     def _emit_activate(self):
         if not self.plugin.status:
             self.plugin.status = not self.plugin.status
@@ -172,8 +184,14 @@ class PluginManagerDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.plugin_manager: PluginManager = QApplication.instance().plugin_manager
-        self.plugins: list[PluginMetaData] = self.plugin_manager.discover_local_plugins()
-        self.active_plugins: list[tuple[str, str]] = Data.MODULES["Add-Ons"]
+        self.plugins: list[PluginMetaData] = self.plugin_manager.discover_local_plugins(
+        )
+        self.data_modules = Data.MODULES
+        self.data_navbar_icons = Data.NAVBAR_ICONS
+        self.active_plugins: dict = Data.PLUGINS
+        self.app = QApplication.instance()
+        self.main_window = self.app.main_window
+
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setObjectName("PluginManagerDialog")
@@ -215,7 +233,8 @@ class PluginManagerDialog(QDialog):
         # Scroll area for plugins
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("QScrollArea { border: 0.5px solid black; background-color: #F0F0F0; }")
+        scroll.setStyleSheet(
+            "QScrollArea { border: 0.5px solid black; background-color: #F0F0F0; }")
         contentLayout.addWidget(scroll)
 
         # Container for plugin widgets
@@ -227,7 +246,8 @@ class PluginManagerDialog(QDialog):
         if len(self.plugins) > 0:
             print("\n===========Loaded Plugins===========\n")
             for plugin in self.plugins:
-                print(f"    {plugin.name} by {', '.join(author for author in plugin.authors)}")
+                print(
+                    f"    {plugin.name} by {', '.join(author for author in plugin.authors)}")
                 if plugin.status:
                     print("     [INFO] Status: Active")
                     self.activate_plugin(plugin)
@@ -256,11 +276,19 @@ class PluginManagerDialog(QDialog):
             QPushButton:pressed { background-color: #004E8C; }
         """)
         self.storeButton.clicked.connect(self.open_store_dialog)
-        
+
+        #  Development Plugins Path add-on
+        self.devPathsButton = QPushButton("Development Paths")
+        self.devPathsButton.setFixedHeight(30)
+
+        self.devPathsButton.clicked.connect(
+            self.open_dev_paths_dialog
+        )
 
         # OK button
         buttonLayout = QHBoxLayout()
         buttonLayout.addWidget(self.storeButton)
+        buttonLayout.addWidget(self.devPathsButton)
         buttonLayout.addStretch()
         self.okButton = QPushButton("OK", self)
         self.okButton.setFixedHeight(30)
@@ -276,29 +304,40 @@ class PluginManagerDialog(QDialog):
         contentLayout.addLayout(buttonLayout)
         mainLayout.addWidget(contentWidget)
 
-    
-
     def activate_plugin(self, plugin: PluginMetaData):
         plugin = self.plugin_manager.get_plugin(plugin.id)
-        if plugin and (plugin.name, ":/vectors/IITB_logo.svg") not in self.active_plugins:
-            self.active_plugins.append((plugin.name, ":/vectors/IITB_logo.svg"))
+        if plugin and plugin.name.title() not in self.active_plugins.keys():
+            self.active_plugins[plugin.name.title()] = plugin.module_tree
+            self.data_modules.update({plugin.name.title(): plugin.module_tree})
+            self.data_navbar_icons.update({plugin.name.title(): plugin.icons})
+
     def deactivate_plugin(self, plugin: PluginMetaData):
-        self.active_plugins[:] = [
-            p for p in self.active_plugins if p[0] != plugin.name
-        ]
+        self.active_plugins.pop(plugin.name.title(), None)
+        self.data_modules.pop(plugin.name.title(), None)
+        self.data_navbar_icons.pop(plugin.name.title(), None)
 
     def delete_plugin(self, plugin: PluginMetaData):
         self.deactivate_plugin(plugin)
         self.plugin_manager.delete_plugin(plugin)
         self.refresh_plugin()
-    
+
     def open_store_dialog(self):
         # print("[PLUGIN STORE] Opening Plugin Store Dialog...")
         store_dialog = PluginStoreDialog()
-        store_dialog.exec() 
+        store_dialog.exec()
 
+    def open_dev_paths_dialog(self):
+
+        self.dev_paths_dialog = DevelopmentPluginPathsDialog(
+            self.plugin_manager,
+            self
+        )
+
+        self.dev_paths_dialog.refresh_plugins.connect(self.refresh_plugins)
+        self.dev_paths_dialog.show()
 
     def refresh_plugins(self):
+        self.plugin_manager.dev_plugins_paths = self.plugin_manager.state_manager.get_plugin_paths()
         self.plugins = self.plugin_manager.discover_local_plugins()
         # Clear old plugin widgets
         for i in reversed(range(self.pluginLayout.count())):
@@ -321,11 +360,191 @@ class PluginManagerDialog(QDialog):
 
     def closeEvent(self, event):
         self.plugin_manager.state_manager.flush()
-        super().closeEvent(event)           
-    
+        super().closeEvent(event)
+
     def okClicked(self):
         self.plugin_manager.state_manager.flush()
         self.accept()
+
+
+class DevelopmentPluginPathsDialog(QDialog):
+    refresh_plugins = Signal()
+
+    def __init__(self, plugin_manager, parent=None):
+        super().__init__(parent)
+
+        self.plugin_manager = plugin_manager
+        self.setWindowFlags(Qt.Window)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setObjectName("DevelopmentPluginPathsDialog")
+        self.setFixedSize(600, 400)
+
+        self.setStyleSheet("""
+            QDialog {
+                background-color: white;
+                border: 1px solid #90AF13;
+            }
+
+            QListWidget {
+                border: 1px solid #c0c0c0;
+                background-color: white;
+                padding: 4px;
+            }
+
+            QPushButton {
+                background-color: #90AF13;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 20px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+
+            QPushButton:hover {
+                background-color: #7A9611;
+            }
+
+            QPushButton:pressed {
+                background-color: #6B850F;
+            }
+        """)
+
+        # =====================
+        # Main Layout
+        # =====================
+
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(1, 1, 1, 1)
+        main_layout.setSpacing(0)
+
+        # =====================
+        # Title Bar
+        # =====================
+
+        self.title_bar = CustomTitleBar()
+        self.title_bar.setTitle("Development Plugin Repositories")
+
+        main_layout.addWidget(self.title_bar)
+
+        # =====================
+        # Content
+        # =====================
+
+        content_layout = QVBoxLayout()
+        content_layout.setContentsMargins(10, 10, 10, 10)
+
+        label = QLabel("Configured Plugin Repository Locations")
+        label.setStyleSheet("font-size: 11pt; font-weight: bold;")
+
+        content_layout.addWidget(label)
+
+        self.path_list = QListWidget()
+
+        content_layout.addWidget(self.path_list)
+
+        # =====================
+        # Buttons
+        # =====================
+
+        path_button_layout = QHBoxLayout()
+
+        self.add_button = QPushButton("Add Repository")
+        self.remove_button = QPushButton("Remove Repository")
+
+        path_button_layout.addWidget(self.add_button)
+        path_button_layout.addWidget(self.remove_button)
+        path_button_layout.addStretch()
+
+        content_layout.addLayout(path_button_layout)
+
+        # Bottom Buttons
+
+        bottom_layout = QHBoxLayout()
+        bottom_layout.addStretch()
+
+        self.close_button = QPushButton("Close")
+
+        bottom_layout.addWidget(self.close_button)
+
+        content_layout.addLayout(bottom_layout)
+
+        main_layout.addLayout(content_layout)
+
+        # =====================
+        # Signals
+        # =====================
+
+        self.add_button.clicked.connect(self.add_repository)
+        self.remove_button.clicked.connect(self.remove_repository)
+        self.close_button.clicked.connect(self.accept)
+
+        self.refresh_paths()
+
+    def refresh_paths(self):
+
+        self.path_list.clear()
+
+        paths = self.plugin_manager.state_manager.get_plugin_paths()
+
+        for path in paths:
+            text = str(path)
+
+            self.path_list.addItem(text)
+
+    def add_repository(self):
+
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Select Development Plugin Repository"
+        )
+
+        if not directory:
+            return
+
+        self.plugin_manager.state_manager.add_plugin_path(
+            directory
+        )
+        self.refresh_paths()
+        self.refresh_plugins.emit()
+
+    def remove_repository(self):
+
+        item = self.path_list.currentItem()
+
+        if item is None:
+            CustomMessageBox(
+                title="Please select a repository.",
+                text='No Selection',
+                dialogType=MessageBoxType.Information
+            ).exec()
+            return
+
+        path = item.text().split(" (")[0]
+
+        reply = QMessageBox.question(
+            self,
+            "Remove Repository",
+            f"Remove repository?\n\n{path}",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply != QMessageBox.Yes:
+            return
+
+        self.plugin_manager.state_manager.remove_plugin_path(
+            path
+        )
+
+        self.refresh_paths()
+        self.refresh_plugins.emit()
+
+    def closeEvent(self, event):
+
+        self.plugin_manager.state_manager.flush()
+
+        super().closeEvent(event)
 
 # # Test the dialog
 # if __name__ == "__main__":

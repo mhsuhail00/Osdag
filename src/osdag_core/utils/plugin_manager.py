@@ -1,12 +1,17 @@
 import json
-import os, subprocess, sys, requests, platform
+import os
+import subprocess
+import sys
+import requests
+import platform
 import tempfile
 from dataclasses import dataclass, field
 from threading import Lock
 from importlib import metadata
 from pathlib import Path
 import pkgutil
-import importlib, uuid
+import importlib
+import uuid
 from types import ModuleType
 
 
@@ -21,6 +26,8 @@ class PluginMetaData:
     status: bool = field(default_factory=lambda: False)
     module: object = field(default_factory=lambda: None)
     entry_class: object = field(default_factory=lambda: None)
+    module_tree: list[tuple] | dict[str,list[tuple]] = field(default_factory=lambda: [("No Module","",None)])
+    icons: list[str] = field(default_factory=lambda: [":/images/add_ons.png", ":/images/add_ons_clicked.png"])
     is_dev: bool = field(default_factory=lambda: False)
 
 
@@ -28,8 +35,7 @@ class PluginManager:
     def __init__(self):
         self.state_manager = StateManager()
         self.plugins: list[PluginMetaData] = []
-        self.dev_plugins_path = Path(
-            __file__).resolve().parent.parent.parent / "plugins"
+        self.dev_plugins_paths: list[Path] = self.state_manager.get_plugin_paths()
         self.plugins_entry_point = None
         print(f"[INFO] PluginManager initialized.")
 
@@ -79,36 +85,49 @@ class PluginManager:
             print(f"[WARN] Entry point loading failed: {e}")
 
     def _load_dev_plugins(self) -> None:
-        if not self.dev_plugins_path.exists():
-            return
-        for _, name, ispkg in pkgutil.iter_modules([str(self.dev_plugins_path)]):
-            if not ispkg:
-                continue
-            if name in [p.name for p in self.plugins]:
+        for plugin_root in self.dev_plugins_paths:
+            if not plugin_root.exists():
                 print(
-                    f"[WARN] Dev plugin '{name}' is already loaded from osdag.plugins entry point.")
-                continue
-            try:
-                module = importlib.import_module(f"plugins.{name}")
-                if not getattr(module, "IS_OSDAG_PLUGIN", False):
-                    print(
-                        f"[WARN] Dev plugin '{name}' is not a valid OSDAG plugin.")
+                    f"[ERROR] Development plugins path '{plugin_root}' does not exist.")
+                return
+
+            # Add workspace root to sys.path so plugins can be imported
+            workspace_root = plugin_root.parent
+            if str(workspace_root) not in sys.path:
+                sys.path.insert(0, str(workspace_root))
+
+            for pkg_dir in plugin_root.iterdir():
+                if not pkg_dir.is_dir():
                     continue
-                meta = getattr(module, "META", {})
-                name = meta.get("name")
-                if name is None:
-                    print(f"[WARN] Dev plugin '{name}' is missing 'name'.")
-                    continue
-                entry_class = self._resolve_entry_class(
-                    module, name, getattr(module, "ENTRY_POINT", None))
-                if entry_class:
-                    self.plugins.append(PluginMetaData(
-                        **meta, module=module, entry_class=entry_class, is_dev=True))
-                else:
-                    print(
-                        f"[WARN] Dev plugin '{name}' could not resolve entry class.")
-            except Exception as e:
-                print(f"[WARN] Could not load dev plugins: {e}")
+                for _, name, ispkg in pkgutil.iter_modules([str(pkg_dir)]):
+                    if not ispkg:
+                        continue
+                    if name in [p.name for p in self.plugins]:
+                        print(
+                            f"[WARN] Development plugin '{name}' is already loaded from osdag.plugins entry point.")
+                        continue
+                    try:
+                        module = importlib.import_module(
+                            f"plugins.{pkg_dir.name}.{name}")
+                        if not getattr(module, "IS_OSDAG_PLUGIN", False):
+                            print(
+                                f"[WARN] Development plugin '{name}' is not a valid OSDAG plugin.")
+                            continue
+                        meta = getattr(module, "META", {})
+                        plugin_name = meta.get("name")
+                        if plugin_name is None:
+                            print(f"[WARN] Development plugin '{name}' is missing 'name'.")
+                            continue
+                        entry_class = self._resolve_entry_class(
+                            module, plugin_name, getattr(module, "ENTRY_POINT", None))
+                        if entry_class:
+                            self.plugins.append(PluginMetaData(
+                                **meta, status=False, module=module, entry_class=entry_class,))
+                        else:
+                            print(
+                                f"[WARN] Development plugin '{name}' could not resolve entry class.")
+                    except Exception as e:
+                        print(f"[WARN] Could not load Development plugins: {e}")
 
     def _resolve_entry_class(self, module: ModuleType, name: str, entry_path: str) -> object | None:
         if not entry_path:
@@ -126,9 +145,9 @@ class PluginManager:
                 f"[WARN] Could not resolve entry class '{entry_path}' for plugin '{name}': {e}")
             return None
 
-
     def discover_online_plugins(self, channel: str) -> list[PluginMetaData]:
-        # Simulate discovering online plugins[sys.executable, "-m", "conda", "search", "--json", "-c", channel]
+        """Discover available plugins from conda channel (metadata only).
+        After downloading, plugins will be loaded via entry points."""
         url = f"https://conda.anaconda.org/{channel}/label/main/noarch/repodata.json"
         pkgs = self._fetch_channel_pkgs(url=url)
         online_plugins = []
@@ -140,10 +159,12 @@ class PluginManager:
                 "authors": [info.get("author", "Unknown")],
                 "version": info.get("version", "1.0.0"),
             }
+            # Online plugins are returned as available for download only
+            # After download, they will be loaded via _load_entry_point_plugins()
             online_plugins.append(PluginMetaData(**meta))
         return online_plugins
 
-    def _fetch_channel_pkgs(self, url:str):
+    def _fetch_channel_pkgs(self, url: str):
         """Fetch and parse repodata.json from a conda channel and return packages."""
         resp = requests.get(url, timeout=20)
         resp.raise_for_status()
@@ -181,11 +202,13 @@ class PluginManager:
             f"zehen-249::{plugin.name}",
             "-y"
         ]
-        result = subprocess.run(cmd,capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True)
         # print(result.stdout)
         # print(result.stderr)
         if result.returncode == 0:
-            self.plugins.append(plugin)
+            # self.plugins.append(plugin)
+            # After download, reload entry point plugins to load the newly installed plugin
+            self._load_entry_point_plugins()
             return True
         return False
 
@@ -213,7 +236,7 @@ class PluginManager:
 
     def update_plugin(self, plugin: PluginMetaData) -> bool:
         print(f"[INFO] Updating plugin: {plugin.name}")
-        
+
         if not hasattr(self, 'conda_exe'):
             self.conda_exe = os.environ["CONDA_EXE"]
 
@@ -230,7 +253,6 @@ class PluginManager:
         if result.returncode == 0:
             return True
         return False
-
 
     def get_plugin(self, plugin_id: str) -> PluginMetaData | None:
         for p in self.plugins:
@@ -250,6 +272,7 @@ class StateManager:
         self.state_file = Path(__file__).resolve(
         ).parent.parent / "data" / "ResourceFiles" / "plugins" / "plugin_state.json"
         self.state_file.parent.mkdir(parents=True, exist_ok=True)
+        self.plugins_paths_key = "__plugins_paths__"
         self._lock = Lock()
         self.states: dict[str, bool] = self._load_states()
         self._dirty = False
@@ -305,3 +328,37 @@ class StateManager:
         except Exception as e:
             print(
                 f"[ERROR] Failed to save state file {self.state_file}: {e}")
+
+    # Developement Plugins 
+    def get_plugin_paths(self) -> list[Path]:
+        with self._lock:
+            paths = [Path(path) for path in self.states.get(self.plugins_paths_key, [])]
+            return paths
+        
+    def add_plugin_path(self, path: str | Path) -> None:
+        with self._lock:
+            paths = self.states.setdefault(
+                self.plugins_paths_key,
+                []
+            )
+
+            path = str(Path(path).resolve())
+
+            if path not in paths:
+                paths.append(path)
+                self._dirty = True
+                
+    def remove_plugin_path(self, path: str | Path) -> None:
+        with self._lock:
+            paths = self.states.get(
+                self.plugins_paths_key,
+                []
+            )
+
+            path = str(Path(path).resolve())
+
+            if path in paths:
+                paths.remove(path)
+                self._dirty = True
+
+    
