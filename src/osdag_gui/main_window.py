@@ -15,7 +15,7 @@ Handles tab management, docking icons, and main window controls.
 import osdag_gui.resources.resources_rc
 
 import sys, sqlite3
-import os, yaml
+import os, yaml, importlib
 from pathlib import Path
 from PySide6.QtWidgets import (
     QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QApplication, QFileDialog,
@@ -857,7 +857,10 @@ class MainWindow(QMainWindow):
     def _check_design_done(self, index) -> bool:
         module = self._get_template_instance(index)
         if hasattr(module, 'backend'):
-            return module.backend.design_status
+            try:
+                return module.backend.design_status
+            except AttributeError:
+                return True
         else:
             return False
     
@@ -1388,11 +1391,15 @@ class MainWindow(QMainWindow):
         elif card_title == KEY_DISP_BASE_PLATE:
             self.open_base_plate_conn()
 
+        # -----------Plugins-----------------------------
+        else:
+            self.common_open_widget_plugin(card_title)
+
     # TO update count of opened module in current session
     def update_module_count(self, backend:object) -> int:
         key = backend.module_name()
         # Increment module count
-        self.module_count[key] += 1
+        self.module_count[key] = self.module_count.get(key, -2) + 1
         return self.module_count[key]
 
     #-------------Functions-to-load-modules-in-Tabwidget-START---------------------------
@@ -1435,6 +1442,53 @@ class MainWindow(QMainWindow):
         
         index = self.tab_bar.currentIndex()
         self.tab_bar.setTabText(index, title)
+    
+    def common_open_widget_plugin(self, backend_class_path):
+        module_path, class_name = backend_class_path.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        backend_class = getattr(module, class_name)
+
+        id = self.update_module_count(backend_class)
+
+        self.clear_layout(self.main_widget_layout)
+        from osdagbridge.desktop.ui.template_page import CustomWindow
+        template_page = CustomWindow(class_name, backend_class, parent=self)
+        # Connect Import XLSX
+        # template_page.importSection.connect(self.import_section)
+
+        template_page.setWindowFlags(Qt.Widget)
+        template_page.setAttribute(Qt.WA_DontCreateNativeAncestors, True)
+        template_page.setAttribute(Qt.WA_NativeWindow, False)
+        
+        # Prevent all children from creating native windows
+        # IMPORTANT: This enables event detection after opening template_page
+        for child in template_page.findChildren(QWidget):
+            child.setAttribute(Qt.WA_DontCreateNativeAncestors, True)
+
+        # # Load the last Design Inputs-start------------------------------------
+        # last_design_folder = os.path.join('ResourceFiles', 'last_designs')
+        # last_design_file = str(template_page.backend.module_name()).replace(' ', '') + ".osi"
+        # last_design_file = os.path.join(last_design_folder, last_design_file)
+        # last_design_dictionary = {}
+
+        # # Create folder if it doesn't exist
+        # if not os.path.isdir(last_design_folder):
+        #     os.makedirs(last_design_folder)
+
+        # # Load previous design if file exists
+        # if os.path.isfile(last_design_file):
+        #     with open(str(last_design_file), 'r') as last_design:
+        #         last_design_dictionary = yaml.safe_load(last_design)
+        #         template_page.setDictToUserInputs(last_design_dictionary)
+        # Load the last Design Inputs-end------------------------------------
+
+        self.main_widget_instance = template_page
+        # template_page.openNewTab.connect(self.handle_add_tab)
+        # template_page.downloadDatabase.connect(self.download_Database)
+        self.main_widget_layout.addWidget(template_page)
+        
+        index = self.tab_bar.currentIndex()
+        self.tab_bar.setTabText(index, class_name)
     
     # 1-Fin-plate-shear-connection
     def open_fin_plate_shear_conn(self):
@@ -1610,6 +1664,14 @@ class MainWindow(QMainWindow):
         backend = BasePlateConnection
         id = self.update_module_count(backend)
         self.common_open_module(backend, "Base Plate Connection", id)
+
+    def open_widget_plugin(self,backend_class_path):
+        path = backend_class_path
+        module_path, class_name = path.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        backend_cls = getattr(module, class_name)
+        id = self.update_module_count(backend_cls)
+        self.common_open_module(backend_cls, class_name, id)
 
     def open_home_page(self, module):
         self.clear_layout(self.main_widget_layout)

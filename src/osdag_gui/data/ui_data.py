@@ -87,14 +87,11 @@ class Data:
         "3D Frame": 
         [],
 
-        # ----Plugins----
-        "Add-Ons": 
-        [],
-        "osdagbridge":[
-            ("Plate", "Plate", ":/images/add_ons.png")
-        ]
     }
     
+    PLUGINS = {
+        
+    }
     NAVBAR_ICONS = {
         "Home": [":/vectors/nav_icons/home_default.svg", ":/vectors/nav_icons/home_clicked.svg"],
         "Connection": [":/vectors/nav_icons/connection.svg", ":/vectors/nav_icons/connection_dark.svg"],
@@ -106,8 +103,6 @@ class Data:
         "2D Frame": [":/vectors/nav_icons/2d_frame.svg", ":/vectors/nav_icons/2d_frame_dark.svg"],
         "3D Frame": [":/vectors/nav_icons/3d_frame.svg", ":/vectors/nav_icons/3d_frame_dark.svg"],
         # "Group Design": [":/vectors/nav_icons/group_design.svg", ":/vectors/nav_icons/group_design_dark.svg"],
-        "Add-Ons": [":/images/add_ons.png", ":/images/add_ons_clicked.png"],
-        "osdagbridge": [":/images/add_ons.png", ":/images/add_ons_clicked.png"]
     }
 
     FLOATING_NAVBAR = [

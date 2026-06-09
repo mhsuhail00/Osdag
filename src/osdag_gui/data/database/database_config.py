@@ -260,7 +260,10 @@ MODULE_MAP = {
 
 # To retrieve the name of a module function that can open the required module
 def get_module_function(key: str):
-    return MODULE_MAP[key][2]
+    if MODULE_MAP.get(key,None):
+        return MODULE_MAP[key][2]
+    else: 
+        return "open_widget_plugin"
 
 import sqlite3
 from datetime import datetime, timedelta
